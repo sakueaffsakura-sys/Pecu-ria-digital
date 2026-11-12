@@ -67,13 +67,14 @@ function valor(string $sql, array $p = []): mixed
     return $r === false ? null : $r;
 }
 
-/** Insere e devolve o id. As colunas vêm sempre do código (nunca do formulário). */
-function inserir(string $tabela, array $dados): int
+/** Insere e devolve o id (gera um UUID quando a tabela usa UUID). As colunas vêm sempre do código. */
+function inserir(string $tabela, array $dados, bool $gerarId = true): string
 {
+    if ($gerarId && !array_key_exists('id', $dados)) $dados = ['id' => uuid()] + $dados;
     $cols = array_keys($dados);
     $sql = 'INSERT INTO ' . $tabela . ' (' . implode(', ', $cols) . ') VALUES (' . implode(', ', array_fill(0, count($cols), '?')) . ')';
     q($sql, $dados);
-    return (int) db()->lastInsertId();
+    return $gerarId ? (string) $dados['id'] : (string) db()->lastInsertId();
 }
 
 function atualizar(string $tabela, array $dados, string $where, array $p): int
@@ -82,9 +83,30 @@ function atualizar(string $tabela, array $dados, string $where, array $p): int
     return q("UPDATE $tabela SET $sets WHERE $where", [...array_values($dados), ...$p])->rowCount();
 }
 
+/** UUID v4 (mesmo formato dos identificadores do sistema original). */
+function uuid(): string
+{
+    $b = random_bytes(16);
+    $b[6] = chr((ord($b[6]) & 0x0f) | 0x40);
+    $b[8] = chr((ord($b[8]) & 0x3f) | 0x80);
+    $h = bin2hex($b);
+    return substr($h, 0, 8) . '-' . substr($h, 8, 4) . '-' . substr($h, 12, 4) . '-' . substr($h, 16, 4) . '-' . substr($h, 20);
+}
+
+function eh_uuid(mixed $v): bool
+{
+    return is_string($v) && (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $v);
+}
+
+function agora(): string
+{
+    return date('Y-m-d H:i:s');
+}
+
 function transacao(callable $fn): mixed
 {
     $pdo = db();
+    if ($pdo->inTransaction()) return $fn();
     $pdo->beginTransaction();
     try {
         $r = $fn();
@@ -143,6 +165,7 @@ function ler_decimal(?string $s): ?float
     $s = trim(str_replace(['R$', ' '], '', (string) $s));
     if ($s === '') return null;
     if (str_contains($s, ',')) $s = str_replace(['.', ','], ['', '.'], $s);
+    elseif (preg_match('/^-?\d{1,3}(\.\d{3})+$/', $s)) $s = str_replace('.', '', $s); // 1.000 = mil
     return is_numeric($s) ? (float) $s : null;
 }
 
@@ -161,13 +184,55 @@ function num_br(float|int|string|null $n, int $casas = 0): string
 
 function dinheiro(float|int|string|null $n): string
 {
-    return 'R$ ' . num_br((float) $n, 2);
+    $v = (float) $n;
+    return ($v < 0 ? '-' : '') . 'R$ ' . num_br(abs($v), 2);
 }
 
 function mes_br(string $ym): string
 {
     $nomes = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
     return $nomes[(int) substr($ym, 5, 2) - 1] . '/' . substr($ym, 2, 2);
+}
+
+function mes_curto(string $ym): string
+{
+    return ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][(int) substr($ym, 5, 2) - 1];
+}
+
+/** "quarta-feira, 11 de novembro" */
+function data_extenso(string $ymd, bool $diaSemana = true): string
+{
+    $t = strtotime($ymd);
+    $sem = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'][(int) date('w', $t)];
+    $mes = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'][(int) date('n', $t) - 1];
+    return ($diaSemana ? $sem . ', ' : '') . (int) date('j', $t) . ' de ' . $mes;
+}
+
+function nome_mes(int $m): string
+{
+    return ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'][$m - 1];
+}
+
+/** Número curto: 7,2 mil · 1,5 mi */
+function compacto(float $v): string
+{
+    $a = abs($v);
+    if ($a >= 1e6) return num_br($v / 1e6, fmod($v / 1e6, 1) == 0.0 ? 0 : 1) . ' mi';
+    if ($a >= 1e3) return num_br($v / 1e3, fmod($v / 1e3, 1) == 0.0 ? 0 : 1) . ' mil';
+    return num_br($v, fmod($v, 1) == 0.0 ? 0 : 1);
+}
+
+function plural(int $n, string $um, string $varios): string
+{
+    return num_br($n) . ' ' . ($n === 1 ? $um : $varios);
+}
+
+/** Texto para a tela: códigos do banco ("em_andamento") perdem o "_"; o que a pessoa digitou fica igual. */
+function bonito(mixed $v): string
+{
+    if ($v === null || $v === '') return '—';
+    $t = (string) $v;
+    return preg_match('/^[a-z0-9]+(_[a-z0-9]+)+$/', $t) ? str_replace('_', ' ', $t) : $t;
 }
 
 function idade(?string $nascimento): string
@@ -227,7 +292,22 @@ function tela(string $nome, array $vars = [], string $layout = 'layout'): never
 function pagina_erro(int $codigo, string $msg): never
 {
     http_response_code($codigo);
-    tela('erro', ['titulo' => 'Ops', 'mensagem' => $msg], usuario() ? 'layout' : 'layout_publico');
+    if (eh_pedido_json()) responder_json(['erro' => $msg], $codigo);
+    tela('erro', ['titulo' => $codigo === 404 ? 'Página não encontrada' : 'Não deu certo', 'mensagem' => $msg], 'layout_simples');
+}
+
+function eh_pedido_json(): bool
+{
+    return str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json') || str_starts_with((string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH), '/api/');
+}
+
+function responder_json(mixed $dados, int $codigo = 200): never
+{
+    http_response_code($codigo);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode($dados, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
 }
 
 // ----- Sessão e proteção ---------------------------------------------------
@@ -254,7 +334,7 @@ function cabecalhos_seguranca(): void
     header('X-Frame-Options: DENY');
     header('Referrer-Policy: same-origin');
     header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
-    header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'");
+    header("Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
 }
 
 function csrf_token(): string
@@ -270,7 +350,7 @@ function csrf_campo(): string
 
 function conferir_csrf(): void
 {
-    $enviado = (string) ($_POST['_csrf'] ?? '');
+    $enviado = (string) ($_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF'] ?? '');
     if ($enviado === '' || !hash_equals(csrf_token(), $enviado)) {
         pagina_erro(419, 'A página ficou aberta por muito tempo. Volte, recarregue e tente de novo.');
     }
@@ -290,25 +370,15 @@ function ip_cliente(): string
 function dentro_do_limite(string $chave, int $max, int $minutos): bool
 {
     $desde = date('Y-m-d H:i:s', time() - $minutos * 60);
-    $n = (int) valor('SELECT COUNT(*) FROM tentativas_login WHERE chave = ? AND criado_em > ?', [$chave, $desde]);
+    $n = (int) valor('SELECT COUNT(*) FROM rate_limits WHERE chave = ? AND criado_em > ?', [$chave, $desde]);
     return $n < $max;
 }
 
 function registrar_tentativa(string $chave): void
 {
-    q('INSERT INTO tentativas_login (chave, criado_em) VALUES (?, ?)', [substr($chave, 0, 190), date('Y-m-d H:i:s')]);
+    q('INSERT INTO rate_limits (chave, criado_em) VALUES (?, ?)', [substr($chave, 0, 190), date('Y-m-d H:i:s')]);
     // Limpeza ocasional das tentativas antigas.
     if (random_int(1, 50) === 1) {
-        q('DELETE FROM tentativas_login WHERE criado_em < ?', [date('Y-m-d H:i:s', time() - 86400)]);
-    }
-}
-
-function registrar_atividade(string $acao, string $tabela, ?int $id): void
-{
-    try {
-        q('INSERT INTO registro_atividades (propriedade_id, usuario_id, acao, tabela, registro_id, criado_em) VALUES (?, ?, ?, ?, ?, ?)',
-            [propriedade()['id'] ?? null, usuario()['id'] ?? null, $acao, $tabela, $id, date('Y-m-d H:i:s')]);
-    } catch (Throwable) {
-        // O registro de atividade nunca impede o trabalho.
+        q('DELETE FROM rate_limits WHERE criado_em < ?', [date('Y-m-d H:i:s', time() - 86400)]);
     }
 }

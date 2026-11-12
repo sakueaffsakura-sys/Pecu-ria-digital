@@ -2,311 +2,252 @@
 declare(strict_types=1);
 
 // ---------------------------------------------------------------------------
-// Cadastros do sistema. Cada módulo diz a tabela, os campos e o que mostrar na lista;
-// o CRUD (app/crud.php) faz o resto. Os nomes de tabela e coluna vêm só daqui, nunca do navegador.
-//
-// Tipos de campo: texto, area (texto longo), inteiro, decimal, dinheiro, data, opcao, ref (lista de outra
-// tabela), animal (digita o brinco). "virtual" = campo do formulário que não é coluna da tabela.
+// Cadastros, iguais aos do sistema original (mesmos títulos, textos, colunas e campos).
+// Tipos de campo: text, textarea, number, date, select, animal (brinco ou nome), lote, vacina.
+// animal/lote/vacina: a pessoa digita; se não existir, o cadastro é criado sozinho (como no original).
 // ---------------------------------------------------------------------------
 
 const SEXOS = ['F' => 'Fêmea', 'M' => 'Macho'];
+const SITUACOES_ANIMAL = ['ativo' => 'Ativo', 'vendido' => 'Vendido', 'perdido' => 'Perdido', 'falecido' => 'Morto', 'transferido' => 'Transferido'];
+const SITUACOES_INSEMINACAO = ['em_andamento' => 'Em andamento', 'confirmada' => 'Confirmada', 'falhou' => 'Falhou', 'parto_realizado' => 'Parto realizado', 'cancelada' => 'Cancelada'];
+const TIPOS_MOVIMENTO = ['receita' => 'Receita', 'despesa' => 'Despesa', 'investimento' => 'Investimento'];
 
 function modulos(): array
 {
     static $m = null;
     if ($m !== null) return $m;
-
     $m = [
-        'animais' => [
-            'titulo' => 'Animais', 'singular' => 'animal', 'grupo' => 'Rebanho',
-            'ordem' => 't.brinco', 'busca' => ['t.brinco', 't.nome', 't.raca'],
+        'rebanho' => [
+            'titulo' => 'Meu rebanho', 'singular' => 'animal', 'novo' => 'Novo animal', 'primeiro' => 'Cadastrar o primeiro animal',
+            'tabela' => 'animais', 'icone' => 'rebanho',
+            'descricao' => 'Todos os animais, com brinco, lote e situação. Toque num animal para ver a ficha.',
+            'busca' => ['numero_brinco', 'nome', 'raca'], 'dica_busca' => 'Brinco, nome ou raça',
+            'colunas' => ['numero_brinco' => 'Brinco', 'nome' => 'Nome', 'sexo' => 'Sexo', 'raca' => 'Raça', 'situacao' => 'Situação'],
             'campos' => [
-                'brinco' => ['rotulo' => 'Brinco / número', 'tipo' => 'texto', 'obrigatorio' => true, 'max' => 40],
-                'nome' => ['rotulo' => 'Nome', 'tipo' => 'texto', 'max' => 80],
-                'sexo' => ['rotulo' => 'Sexo', 'tipo' => 'opcao', 'obrigatorio' => true, 'opcoes' => SEXOS],
-                'categoria' => ['rotulo' => 'Categoria', 'tipo' => 'opcao', 'opcoes' => [
-                    'bezerro' => 'Bezerro(a)', 'novilha' => 'Novilha', 'vaca' => 'Vaca', 'garrote' => 'Garrote',
-                    'boi' => 'Boi', 'touro' => 'Touro',
-                ]],
-                'raca' => ['rotulo' => 'Raça', 'tipo' => 'texto', 'max' => 60, 'sugestoes' => ['Nelore', 'Girolando', 'Gir', 'Holandesa', 'Angus', 'Brahman', 'Guzerá', 'Jersey', 'Senepol', 'Tabapuã', 'Mestiça']],
-                'data_nascimento' => ['rotulo' => 'Nascimento', 'tipo' => 'data', 'nao_futura' => true],
-                'lote_id' => ['rotulo' => 'Lote', 'tipo' => 'ref', 'ref' => 'lotes'],
-                'mae_id' => ['rotulo' => 'Mãe (brinco)', 'tipo' => 'animal', 'sexo' => 'F'],
-                'pai' => ['rotulo' => 'Pai / sêmen', 'tipo' => 'texto', 'max' => 80],
-                'origem' => ['rotulo' => 'Origem', 'tipo' => 'opcao', 'obrigatorio' => true, 'padrao' => 'nascido',
-                    'opcoes' => ['nascido' => 'Nascido na fazenda', 'comprado' => 'Comprado']],
-                'situacao' => ['rotulo' => 'Situação', 'tipo' => 'opcao', 'obrigatorio' => true, 'padrao' => 'ativo',
-                    'opcoes' => ['ativo' => 'Ativo', 'vendido' => 'Vendido', 'morto' => 'Morto', 'descartado' => 'Descartado']],
-                'observacoes' => ['rotulo' => 'Observações', 'tipo' => 'area'],
+                'numero_brinco' => ['rotulo' => 'Número do brinco', 'obrigatorio' => true, 'max' => 60],
+                'nome' => ['rotulo' => 'Nome', 'max' => 120],
+                'sexo' => ['rotulo' => 'Sexo', 'tipo' => 'select', 'obrigatorio' => true, 'opcoes' => SEXOS],
+                'raca' => ['rotulo' => 'Raça', 'max' => 80],
+                'data_nascimento' => ['rotulo' => 'Data de nascimento', 'tipo' => 'date', 'sem_padrao' => true],
+                'lote_id' => ['rotulo' => 'Lote', 'tipo' => 'lote'],
+                'mae_id' => ['rotulo' => 'Mãe', 'tipo' => 'animal', 'sexo' => 'F'],
+                'pai_id' => ['rotulo' => 'Pai', 'tipo' => 'animal', 'sexo' => 'M'],
+                'situacao' => ['rotulo' => 'Situação', 'tipo' => 'select', 'obrigatorio' => true, 'opcoes' => SITUACOES_ANIMAL],
+                'observacoes' => ['rotulo' => 'Observações', 'tipo' => 'textarea'],
             ],
-            'colunas' => ['brinco', 'nome', 'sexo', 'categoria', 'raca', 'lote_id', 'situacao'],
-            'filtros' => ['situacao', 'sexo', 'lote_id'],
-            'ficha' => true,
-            'antes_salvar' => function (array $d, ?int $id): array|string {
-                if ($id && ($d['mae_id'] ?? null) === $id) return 'O animal não pode ser mãe dele mesmo.';
-                if ($id) $d['atualizado_em'] = date('Y-m-d H:i:s');
-                return $d;
-            },
+            'ordem' => 't.created_at DESC, t.id DESC',
         ],
-
-        'lotes' => [
-            'titulo' => 'Lotes', 'singular' => 'lote', 'grupo' => 'Rebanho',
-            'ordem' => 't.nome', 'busca' => ['t.nome', 't.descricao'],
+        'bezerros' => [
+            'titulo' => 'Evolução dos bezerros', 'singular' => 'pesagem', 'novo' => 'Nova pesagem', 'primeiro' => 'Registrar a primeira pesagem',
+            'tabela' => 'pesagens', 'icone' => 'bezerro',
+            'descricao' => 'Pesagens dos animais jovens, para ver se estão ganhando peso.',
+            'busca' => ['data'], 'dica_busca' => 'Buscar em evolução dos bezerros',
+            'colunas' => ['animal_id' => 'Animal', 'data' => 'Data', 'peso_kg' => 'Peso (kg)', 'observacoes' => 'Observações'],
             'campos' => [
-                'nome' => ['rotulo' => 'Nome do lote', 'tipo' => 'texto', 'obrigatorio' => true, 'max' => 80],
-                'descricao' => ['rotulo' => 'Descrição (pasto, finalidade…)', 'tipo' => 'texto', 'max' => 255],
+                'animal_id' => ['rotulo' => 'Bezerro', 'tipo' => 'animal', 'obrigatorio' => true, 'so_ativos' => true],
+                'data' => ['rotulo' => 'Data', 'tipo' => 'date', 'obrigatorio' => true],
+                'peso_kg' => ['rotulo' => 'Peso (kg)', 'tipo' => 'number', 'obrigatorio' => true],
+                'observacoes' => ['rotulo' => 'Observações', 'tipo' => 'textarea'],
             ],
-            'colunas' => ['nome', 'descricao'],
-            'contagem' => ['rotulo' => 'Animais ativos', 'sql' => "(SELECT COUNT(*) FROM animais a WHERE a.lote_id = t.id AND a.situacao = 'ativo')"],
         ],
-
-        'pesagens' => [
-            'titulo' => 'Pesagens', 'singular' => 'pesagem', 'feminino' => true, 'grupo' => 'Rebanho',
-            'ordem' => 't.data DESC, t.id DESC', 'busca' => ['r_animal_id.brinco'], 'data' => 'data',
+        'vacinacao' => [
+            'titulo' => 'Vacinação', 'singular' => 'aplicação', 'novo' => 'Nova aplicação', 'primeiro' => 'Registrar a primeira vacina',
+            'tabela' => 'vacinacoes', 'icone' => 'syringe',
+            'descricao' => 'Cada aplicação, a próxima dose e o que está atrasado.',
+            'busca' => ['responsavel'], 'dica_busca' => 'Buscar em vacinação',
+            'colunas' => ['tipo_vacina_id' => 'Vacina', 'animal_id' => 'Animal', 'data_aplicacao' => 'Aplicação', 'proxima_aplicacao' => 'Próxima', 'responsavel' => 'Responsável'],
             'campos' => [
-                'animal_id' => ['rotulo' => 'Animal (brinco)', 'tipo' => 'animal', 'obrigatorio' => true],
-                'data' => ['rotulo' => 'Data', 'tipo' => 'data', 'obrigatorio' => true, 'nao_futura' => true, 'padrao_hoje' => true],
-                'peso_kg' => ['rotulo' => 'Peso (kg)', 'tipo' => 'decimal', 'obrigatorio' => true, 'min' => 0.1, 'max' => 3000],
-                'observacoes' => ['rotulo' => 'Observações', 'tipo' => 'texto', 'max' => 255],
+                'tipo_vacina_id' => ['rotulo' => 'Tipo de vacina', 'tipo' => 'vacina', 'obrigatorio' => true],
+                'animal_id' => ['rotulo' => 'Animal', 'tipo' => 'animal', 'so_ativos' => true],
+                'lote_id' => ['rotulo' => 'Lote', 'tipo' => 'lote'],
+                'data_aplicacao' => ['rotulo' => 'Data da aplicação', 'tipo' => 'date', 'obrigatorio' => true],
+                'proxima_aplicacao' => ['rotulo' => 'Próxima aplicação', 'tipo' => 'date', 'sem_padrao' => true, 'dica' => 'Vazio: calculada pelo intervalo da vacina'],
+                'responsavel' => ['rotulo' => 'Responsável', 'max' => 120],
+                'observacao' => ['rotulo' => 'Observação', 'tipo' => 'textarea'],
             ],
-            'colunas' => ['data', 'animal_id', 'peso_kg', 'observacoes'],
-            'duplicado' => 'Esse animal já tem uma pesagem nesse dia.',
+            'abas' => ['vacinacao' => 'Aplicações', 'tipos_vacinas' => 'Tipos de vacina'],
         ],
-
         'tipos_vacinas' => [
-            'titulo' => 'Vacinas e remédios', 'singular' => 'vacina', 'feminino' => true, 'grupo' => 'Sanidade',
-            'ordem' => 't.nome', 'busca' => ['t.nome'],
+            'titulo' => 'Tipos de vacina', 'singular' => 'tipo de vacina', 'novo' => 'Novo tipo de vacina', 'primeiro' => 'Cadastrar a primeira vacina',
+            'tabela' => 'tipos_vacinas', 'icone' => 'shield-check', 'secao' => 'vacinacao',
+            'descricao' => 'As vacinas que você usa e de quantos em quantos dias repetir.',
+            'busca' => ['nome'], 'dica_busca' => 'Buscar em tipos de vacina',
+            'colunas' => ['nome' => 'Nome', 'intervalo_dias' => 'Intervalo (dias)', 'descricao' => 'Descrição', 'ativo' => 'Status'],
             'campos' => [
-                'nome' => ['rotulo' => 'Nome', 'tipo' => 'texto', 'obrigatorio' => true, 'max' => 80,
-                    'sugestoes' => ['Febre aftosa', 'Brucelose', 'Raiva', 'Clostridioses', 'Leptospirose', 'IBR/BVD', 'Vermífugo', 'Carrapaticida']],
-                'intervalo_dias' => ['rotulo' => 'Repetir a cada (dias)', 'tipo' => 'inteiro', 'min' => 1, 'max' => 3650,
-                    'ajuda' => 'Usado para calcular a próxima dose. Deixe vazio se for dose única.'],
-                'observacoes' => ['rotulo' => 'Observações', 'tipo' => 'texto', 'max' => 255],
+                'nome' => ['rotulo' => 'Nome', 'obrigatorio' => true, 'max' => 120],
+                'intervalo_dias' => ['rotulo' => 'Intervalo em dias', 'tipo' => 'number', 'inteiro' => true],
+                'descricao' => ['rotulo' => 'Descrição', 'tipo' => 'textarea'],
             ],
-            'colunas' => ['nome', 'intervalo_dias', 'observacoes'],
-            'em_uso' => 'Esta vacina tem aplicações lançadas. Exclua as aplicações antes.',
+            'ordem' => 't.nome',
+            'abas' => ['vacinacao' => 'Aplicações', 'tipos_vacinas' => 'Tipos de vacina'],
+            'em_uso' => 'Esta vacina tem aplicações registradas. Exclua as aplicações antes.',
         ],
-
-        'vacinacoes' => [
-            'titulo' => 'Vacinações', 'singular' => 'vacinação', 'feminino' => true, 'grupo' => 'Sanidade',
-            'ordem' => 't.data DESC, t.id DESC', 'busca' => ['r_animal_id.brinco', 'r_tipo_vacina_id.nome', 'r_lote_id.nome'], 'data' => 'data',
+        'inseminacao' => [
+            'titulo' => 'Inseminação', 'singular' => 'inseminação', 'novo' => 'Nova inseminação', 'primeiro' => 'Registrar a primeira inseminação',
+            'tabela' => 'inseminacoes', 'icone' => 'flask-conical',
+            'descricao' => 'Inseminações, situação e a previsão de parto de cada vaca.',
+            'busca' => ['reprodutor_semen'], 'dica_busca' => 'Buscar em inseminação',
+            'colunas' => ['animal_id' => 'Animal', 'data_inseminacao' => 'Data', 'previsao_parto' => 'Previsão de parto', 'situacao' => 'Situação'],
             'campos' => [
-                'tipo_vacina_id' => ['rotulo' => 'Vacina / remédio', 'tipo' => 'ref', 'ref' => 'tipos_vacinas', 'obrigatorio' => true],
-                'animal_id' => ['rotulo' => 'Animal (brinco)', 'tipo' => 'animal', 'ajuda' => 'Preencha o animal ou o lote.'],
-                'lote_id' => ['rotulo' => 'Lote inteiro', 'tipo' => 'ref', 'ref' => 'lotes'],
-                'data' => ['rotulo' => 'Data da aplicação', 'tipo' => 'data', 'obrigatorio' => true, 'nao_futura' => true, 'padrao_hoje' => true],
-                'dose' => ['rotulo' => 'Dose', 'tipo' => 'texto', 'max' => 40],
-                'proxima_dose' => ['rotulo' => 'Próxima dose', 'tipo' => 'data', 'ajuda' => 'Vazio = calculada pelo intervalo da vacina.'],
-                'responsavel' => ['rotulo' => 'Responsável', 'tipo' => 'texto', 'max' => 80],
-                'observacoes' => ['rotulo' => 'Observações', 'tipo' => 'texto', 'max' => 255],
+                'animal_id' => ['rotulo' => 'Animal', 'tipo' => 'animal', 'obrigatorio' => true, 'sexo' => 'F', 'so_ativos' => true],
+                'data_inseminacao' => ['rotulo' => 'Data da inseminação', 'tipo' => 'date', 'obrigatorio' => true],
+                'reprodutor_semen' => ['rotulo' => 'Reprodutor / sêmen', 'obrigatorio' => true, 'max' => 160],
+                'previsao_parto' => ['rotulo' => 'Previsão de parto', 'tipo' => 'date', 'sem_padrao' => true, 'dica' => 'Vazio: data + gestação da propriedade'],
+                'situacao' => ['rotulo' => 'Situação', 'tipo' => 'select', 'obrigatorio' => true, 'opcoes' => SITUACOES_INSEMINACAO],
+                'observacao' => ['rotulo' => 'Observação', 'tipo' => 'textarea'],
             ],
-            'colunas' => ['data', 'tipo_vacina_id', 'animal_id', 'lote_id', 'proxima_dose'],
-            'filtros' => ['tipo_vacina_id', 'lote_id'],
-            'antes_salvar' => function (array $d, ?int $id): array|string {
-                if (empty($d['animal_id']) && empty($d['lote_id'])) return 'Informe o animal ou o lote vacinado.';
-                if ($d['proxima_dose'] === null) {
-                    $intervalo = valor('SELECT intervalo_dias FROM tipos_vacinas WHERE id = ?', [$d['tipo_vacina_id']]);
-                    if ($intervalo) $d['proxima_dose'] = somar_dias($d['data'], (int) $intervalo);
-                } elseif ($d['proxima_dose'] <= $d['data']) {
-                    return 'A próxima dose precisa ser depois da aplicação.';
-                }
-                return $d;
-            },
         ],
-
-        'inseminacoes' => [
-            'titulo' => 'Inseminações', 'singular' => 'inseminação', 'feminino' => true, 'grupo' => 'Reprodução',
-            'ordem' => 't.data DESC, t.id DESC', 'busca' => ['r_animal_id.brinco', 't.touro_semen'], 'data' => 'data',
-            'campos' => [
-                'animal_id' => ['rotulo' => 'Fêmea (brinco)', 'tipo' => 'animal', 'sexo' => 'F', 'obrigatorio' => true],
-                'data' => ['rotulo' => 'Data', 'tipo' => 'data', 'obrigatorio' => true, 'nao_futura' => true, 'padrao_hoje' => true],
-                'tipo' => ['rotulo' => 'Tipo', 'tipo' => 'opcao', 'obrigatorio' => true, 'padrao' => 'IA',
-                    'opcoes' => ['IA' => 'Inseminação artificial', 'IATF' => 'IATF', 'monta' => 'Monta natural', 'TE' => 'Transferência de embrião']],
-                'touro_semen' => ['rotulo' => 'Touro / sêmen', 'tipo' => 'texto', 'max' => 80],
-                'tecnico' => ['rotulo' => 'Técnico', 'tipo' => 'texto', 'max' => 80],
-                'resultado' => ['rotulo' => 'Diagnóstico', 'tipo' => 'opcao', 'obrigatorio' => true, 'padrao' => 'pendente',
-                    'opcoes' => ['pendente' => 'Aguardando', 'prenhe' => 'Prenhe', 'vazia' => 'Vazia']],
-                'previsao_parto' => ['rotulo' => 'Previsão de parto', 'tipo' => 'data', 'ajuda' => 'Vazio = calculada pelo período de gestação da propriedade.'],
-                'observacoes' => ['rotulo' => 'Observações', 'tipo' => 'texto', 'max' => 255],
-            ],
-            'colunas' => ['data', 'animal_id', 'tipo', 'touro_semen', 'resultado', 'previsao_parto'],
-            'filtros' => ['resultado'],
-            'antes_salvar' => function (array $d, ?int $id): array|string {
-                if ($d['resultado'] === 'vazia') {
-                    $d['previsao_parto'] = null;
-                } elseif ($d['previsao_parto'] === null) {
-                    $d['previsao_parto'] = somar_dias($d['data'], (int) propriedade()['periodo_gestacao_dias']);
-                }
-                return $d;
-            },
-        ],
-
         'nascimentos' => [
-            'titulo' => 'Nascimentos', 'singular' => 'nascimento', 'grupo' => 'Reprodução',
-            'ordem' => 't.data DESC, t.id DESC', 'busca' => ['r_mae_id.brinco', 'r_bezerro_id.brinco'], 'data' => 'data',
+            'titulo' => 'Nascimentos', 'singular' => 'nascimento', 'novo' => 'Novo nascimento', 'primeiro' => 'Registrar o primeiro nascimento',
+            'tabela' => 'nascimentos', 'icone' => 'heart-pulse',
+            'descricao' => 'Quem nasceu, de qual vaca e quando.',
+            'busca' => [], 'dica_busca' => 'Buscar em nascimentos',
+            'colunas' => ['vaca_id' => 'Vaca', 'bezerro_id' => 'Bezerro', 'data_nascimento' => 'Nascimento', 'sexo' => 'Sexo'],
             'campos' => [
-                'mae_id' => ['rotulo' => 'Mãe (brinco)', 'tipo' => 'animal', 'sexo' => 'F', 'obrigatorio' => true],
-                'data' => ['rotulo' => 'Data do parto', 'tipo' => 'data', 'obrigatorio' => true, 'nao_futura' => true, 'padrao_hoje' => true],
-                'sexo' => ['rotulo' => 'Sexo da cria', 'tipo' => 'opcao', 'obrigatorio' => true, 'opcoes' => SEXOS],
-                'peso_kg' => ['rotulo' => 'Peso ao nascer (kg)', 'tipo' => 'decimal', 'min' => 1, 'max' => 150],
-                'brinco_cria' => ['rotulo' => 'Brinco da cria', 'tipo' => 'texto', 'max' => 40, 'virtual' => true, 'so_novo' => true,
-                    'ajuda' => 'Se preencher, a cria já entra no cadastro de animais.'],
-                'bezerro_id' => ['rotulo' => 'Cria (brinco)', 'tipo' => 'animal', 'so_edicao' => true],
-                'observacoes' => ['rotulo' => 'Observações', 'tipo' => 'texto', 'max' => 255],
+                'vaca_id' => ['rotulo' => 'Vaca', 'tipo' => 'animal', 'obrigatorio' => true, 'sexo' => 'F', 'so_ativos' => true],
+                'bezerro_id' => ['rotulo' => 'Bezerro', 'tipo' => 'animal', 'obrigatorio' => true, 'so_ativos' => true, 'sexo_do_campo' => 'sexo'],
+                'data_nascimento' => ['rotulo' => 'Data', 'tipo' => 'date', 'obrigatorio' => true],
+                'sexo' => ['rotulo' => 'Sexo', 'tipo' => 'select', 'obrigatorio' => true, 'opcoes' => SEXOS],
+                'lote_id' => ['rotulo' => 'Lote', 'tipo' => 'lote'],
+                'observacoes' => ['rotulo' => 'Observações', 'tipo' => 'textarea'],
             ],
-            'colunas' => ['data', 'mae_id', 'sexo', 'peso_kg', 'bezerro_id'],
-            'antes_salvar' => function (array $d, ?int $id): array|string {
-                $brinco = $d['brinco_cria'] ?? null;
-                unset($d['brinco_cria']);
-                if (!$id && $brinco) {
-                    $existe = valor('SELECT id FROM animais WHERE propriedade_id = ? AND brinco = ?', [propriedade()['id'], $brinco]);
-                    if ($existe) return "Já existe um animal com o brinco $brinco.";
-                    $mae = um('SELECT lote_id, raca FROM animais WHERE id = ?', [$d['mae_id']]);
-                    $d['bezerro_id'] = inserir('animais', [
-                        'propriedade_id' => propriedade()['id'], 'brinco' => $brinco, 'sexo' => $d['sexo'],
-                        'categoria' => 'bezerro', 'data_nascimento' => $d['data'], 'mae_id' => $d['mae_id'],
-                        'lote_id' => $mae['lote_id'] ?? null, 'raca' => $mae['raca'] ?? null, 'origem' => 'nascido', 'situacao' => 'ativo',
-                    ]);
-                    if ($d['peso_kg']) {
-                        inserir('pesagens', ['propriedade_id' => propriedade()['id'], 'animal_id' => $d['bezerro_id'], 'data' => $d['data'], 'peso_kg' => $d['peso_kg'], 'observacoes' => 'Peso ao nascer']);
-                    }
-                }
-                return $d;
-            },
+            'duplicado' => 'Esse bezerro já possui um nascimento registrado.',
         ],
-
-        'producao_leite' => [
-            'titulo' => 'Produção de leite', 'singular' => 'ordenha', 'feminino' => true, 'grupo' => 'Leite',
-            'ordem' => 't.data DESC, t.id DESC', 'busca' => ['r_animal_id.brinco'], 'data' => 'data',
+        'lotes' => [
+            'titulo' => 'Lotes', 'singular' => 'lote', 'novo' => 'Novo lote', 'primeiro' => 'Criar o primeiro lote',
+            'tabela' => 'lotes', 'icone' => 'warehouse',
+            'descricao' => 'Grupos de animais por pasto ou finalidade.',
+            'busca' => ['nome', 'finalidade', 'descricao'], 'dica_busca' => 'Buscar em lotes',
+            'colunas' => ['nome' => 'Nome', 'finalidade' => 'Finalidade', 'descricao' => 'Descrição', 'ativo' => 'Status'],
             'campos' => [
-                'data' => ['rotulo' => 'Data', 'tipo' => 'data', 'obrigatorio' => true, 'nao_futura' => true, 'padrao_hoje' => true],
-                'turno' => ['rotulo' => 'Turno', 'tipo' => 'opcao', 'obrigatorio' => true, 'padrao' => 'dia',
-                    'opcoes' => ['manha' => 'Manhã', 'tarde' => 'Tarde', 'noite' => 'Noite', 'dia' => 'Dia todo']],
-                'litros' => ['rotulo' => 'Litros', 'tipo' => 'decimal', 'obrigatorio' => true, 'min' => 0.1, 'max' => 100000],
-                'animal_id' => ['rotulo' => 'Vaca (brinco)', 'tipo' => 'animal', 'sexo' => 'F', 'ajuda' => 'Deixe vazio para lançar o total do rebanho.'],
-                'observacoes' => ['rotulo' => 'Observações', 'tipo' => 'texto', 'max' => 255],
+                'nome' => ['rotulo' => 'Nome', 'obrigatorio' => true, 'max' => 120],
+                'finalidade' => ['rotulo' => 'Finalidade', 'max' => 120],
+                'descricao' => ['rotulo' => 'Descrição', 'tipo' => 'textarea'],
             ],
-            'colunas' => ['data', 'turno', 'animal_id', 'litros'],
-            'total' => 'litros',
+            'ordem' => 't.nome',
         ],
-
+        'producao' => [
+            'titulo' => 'Leite', 'singular' => 'registro de leite', 'novo' => 'Registrar leite', 'primeiro' => 'Registrar o leite de hoje',
+            'tabela' => 'producao_leite', 'icone' => 'milk',
+            'descricao' => 'Litros de cada vaca por dia. O total em reais é calculado sozinho.',
+            'busca' => [], 'dica_busca' => 'Buscar em leite',
+            'colunas' => ['animal_id' => 'Animal', 'data' => 'Data', 'litros' => 'Litros', 'valor_litro' => 'R$ / litro', 'valor_total' => 'Total'],
+            'campos' => [
+                'animal_id' => ['rotulo' => 'Animal', 'tipo' => 'animal', 'obrigatorio' => true, 'sexo' => 'F', 'so_ativos' => true],
+                'lote_id' => ['rotulo' => 'Lote', 'tipo' => 'lote'],
+                'data' => ['rotulo' => 'Data', 'tipo' => 'date', 'obrigatorio' => true],
+                'litros' => ['rotulo' => 'Litros', 'tipo' => 'number', 'obrigatorio' => true],
+                'valor_litro' => ['rotulo' => 'Valor por litro', 'tipo' => 'number', 'obrigatorio' => true],
+                'observacao' => ['rotulo' => 'Observação', 'tipo' => 'textarea'],
+            ],
+            'abas' => ['producao' => 'Registros de leite', 'anotacoes' => 'Anotações'],
+            'somente_leitura' => ['valor_total'],
+        ],
         'anotacoes' => [
-            'titulo' => 'Anotações', 'singular' => 'anotação', 'feminino' => true, 'grupo' => 'Geral',
-            'ordem' => 't.data DESC, t.id DESC', 'busca' => ['t.titulo', 't.texto'], 'data' => 'data',
+            'titulo' => 'Anotações', 'singular' => 'anotação', 'novo' => 'Nova anotação', 'primeiro' => 'Escrever a primeira anotação',
+            'tabela' => 'anotacoes_producao', 'icone' => 'notebook-pen', 'secao' => 'producao',
+            'descricao' => 'O caderno da fazenda: o que aconteceu, com qual animal e em que dia.',
+            'busca' => ['observacao', 'comportamento', 'alimentacao', 'informacoes_adicionais'], 'dica_busca' => 'Texto, brinco ou nome do animal',
+            'colunas' => ['data' => 'Data', 'animal_id' => 'Animal', 'lote_id' => 'Lote', 'producao' => 'Produção (L)', 'observacao' => 'Observação'],
             'campos' => [
-                'data' => ['rotulo' => 'Data', 'tipo' => 'data', 'obrigatorio' => true, 'padrao_hoje' => true],
-                'titulo' => ['rotulo' => 'Título', 'tipo' => 'texto', 'obrigatorio' => true, 'max' => 120],
-                'texto' => ['rotulo' => 'Anotação', 'tipo' => 'area'],
+                'observacao' => ['rotulo' => 'O que aconteceu', 'tipo' => 'textarea', 'obrigatorio' => true, 'dica' => 'Ex.: Cio observado, produção caiu, vacina aplicada…'],
+                'data' => ['rotulo' => 'Data', 'tipo' => 'date', 'obrigatorio' => true],
+                'animal_id' => ['rotulo' => 'Animal', 'tipo' => 'animal', 'so_ativos' => true, 'dica' => 'Nenhum animal em especial'],
+                'lote_id' => ['rotulo' => 'Lote', 'tipo' => 'lote', 'dica' => 'Nenhum lote em especial'],
+                'comportamento' => ['rotulo' => 'Comportamento', 'avancado' => true],
+                'alimentacao' => ['rotulo' => 'Alimentação', 'avancado' => true],
+                'producao' => ['rotulo' => 'Produção do dia (litros)', 'tipo' => 'number', 'avancado' => true],
+                'informacoes_adicionais' => ['rotulo' => 'Informações adicionais', 'tipo' => 'textarea', 'avancado' => true],
             ],
-            'colunas' => ['data', 'titulo', 'texto'],
-            'antes_salvar' => function (array $d, ?int $id): array|string {
-                if (!$id) $d['autor_id'] = usuario()['id'];
-                return $d;
-            },
+            'abas' => ['producao' => 'Registros de leite', 'anotacoes' => 'Anotações'],
+            'ordem' => 't.data DESC, t.created_at DESC',
         ],
-
+        'financeiro' => [
+            'titulo' => 'Lucros e investimentos', 'singular' => 'lançamento', 'novo' => 'Novo lançamento', 'primeiro' => 'Fazer o primeiro lançamento',
+            'tabela' => 'movimentacoes_financeiras', 'icone' => 'circle-dollar-sign',
+            'descricao' => 'Receitas, despesas e investimentos lançados à mão. Compras e vendas entram sozinhas por Compra e venda.',
+            'busca' => ['descricao', 'categoria'], 'dica_busca' => 'Buscar em lucros e investimentos',
+            'filtro_fixo' => 't.origem_tipo IS NULL',
+            'colunas' => ['tipo' => 'Tipo', 'descricao' => 'Descrição', 'categoria' => 'Categoria', 'data' => 'Data', 'valor' => 'Valor'],
+            'campos' => [
+                'tipo' => ['rotulo' => 'Tipo', 'tipo' => 'select', 'obrigatorio' => true, 'opcoes' => TIPOS_MOVIMENTO],
+                'descricao' => ['rotulo' => 'Descrição', 'obrigatorio' => true, 'max' => 255],
+                'categoria' => ['rotulo' => 'Categoria', 'obrigatorio' => true, 'max' => 120],
+                'valor' => ['rotulo' => 'Valor', 'tipo' => 'number', 'obrigatorio' => true],
+                'data' => ['rotulo' => 'Data', 'tipo' => 'date', 'obrigatorio' => true],
+                'observacao' => ['rotulo' => 'Observação', 'tipo' => 'textarea'],
+            ],
+        ],
         'compras' => [
-            'titulo' => 'Compras', 'singular' => 'compra', 'feminino' => true, 'grupo' => 'Financeiro',
-            'ordem' => 't.data DESC, t.id DESC', 'busca' => ['t.descricao', 't.fornecedor'], 'data' => 'data',
+            'titulo' => 'Compras', 'singular' => 'compra', 'novo' => 'Nova compra', 'primeiro' => 'Registrar a primeira compra',
+            'tabela' => 'compras', 'icone' => 'shopping-cart', 'secao' => 'comercial',
+            'descricao' => 'O que entrou na fazenda. O valor vai sozinho para o financeiro.',
+            'busca' => ['produto_animal', 'fornecedor'], 'dica_busca' => 'Buscar em compras',
+            'colunas' => ['data' => 'Data', 'produto_animal' => 'Produto ou animal', 'quantidade' => 'Quantidade', 'fornecedor' => 'Fornecedor', 'valor' => 'Valor'],
             'campos' => [
-                'data' => ['rotulo' => 'Data', 'tipo' => 'data', 'obrigatorio' => true, 'padrao_hoje' => true],
-                'descricao' => ['rotulo' => 'O que foi comprado', 'tipo' => 'texto', 'obrigatorio' => true, 'max' => 160],
-                'quantidade' => ['rotulo' => 'Quantidade', 'tipo' => 'inteiro', 'obrigatorio' => true, 'min' => 1, 'padrao' => '1'],
-                'valor_total' => ['rotulo' => 'Valor total (R$)', 'tipo' => 'dinheiro', 'obrigatorio' => true, 'min' => 0],
-                'fornecedor' => ['rotulo' => 'Fornecedor', 'tipo' => 'texto', 'max' => 120],
-                'animal_id' => ['rotulo' => 'Animal (brinco, se for um só)', 'tipo' => 'animal'],
-                'observacoes' => ['rotulo' => 'Observações', 'tipo' => 'texto', 'max' => 255],
+                'data' => ['rotulo' => 'Data', 'tipo' => 'date', 'obrigatorio' => true],
+                'produto_animal' => ['rotulo' => 'Produto ou animal', 'obrigatorio' => true, 'max' => 255],
+                'quantidade' => ['rotulo' => 'Quantidade', 'tipo' => 'number', 'obrigatorio' => true],
+                'valor' => ['rotulo' => 'Valor total', 'tipo' => 'number', 'obrigatorio' => true],
+                'fornecedor' => ['rotulo' => 'Fornecedor', 'max' => 160],
+                'categoria' => ['rotulo' => 'Categoria', 'obrigatorio' => true, 'max' => 120],
+                'observacao' => ['rotulo' => 'Observação', 'tipo' => 'textarea'],
             ],
-            'colunas' => ['data', 'descricao', 'quantidade', 'fornecedor', 'valor_total'],
-            'total' => 'valor_total',
-            'depois_salvar' => fn(int $id, array $d) => sincronizar_lancamento('compra', $id, $d),
-            'depois_excluir' => fn(int $id) => q("DELETE FROM movimentacoes WHERE origem = 'compra' AND origem_id = ? AND propriedade_id = ?", [$id, propriedade()['id']]),
+            'abas' => ['compras' => 'Compras', 'vendas' => 'Vendas'],
         ],
-
         'vendas' => [
-            'titulo' => 'Vendas', 'singular' => 'venda', 'feminino' => true, 'grupo' => 'Financeiro',
-            'ordem' => 't.data DESC, t.id DESC', 'busca' => ['t.descricao', 't.comprador'], 'data' => 'data',
+            'titulo' => 'Vendas', 'singular' => 'venda', 'novo' => 'Nova venda', 'primeiro' => 'Registrar a primeira venda',
+            'tabela' => 'vendas', 'icone' => 'trending-up', 'secao' => 'comercial',
+            'descricao' => 'O que saiu da fazenda. O valor vai sozinho para o financeiro; o animal vendido sai do rebanho ativo.',
+            'busca' => ['item', 'comprador'], 'dica_busca' => 'Buscar em vendas',
+            'colunas' => ['data' => 'Data', 'item' => 'Item', 'quantidade' => 'Quantidade', 'comprador' => 'Comprador', 'valor' => 'Valor'],
             'campos' => [
-                'data' => ['rotulo' => 'Data', 'tipo' => 'data', 'obrigatorio' => true, 'padrao_hoje' => true],
-                'descricao' => ['rotulo' => 'O que foi vendido', 'tipo' => 'texto', 'obrigatorio' => true, 'max' => 160],
-                'quantidade' => ['rotulo' => 'Quantidade', 'tipo' => 'inteiro', 'obrigatorio' => true, 'min' => 1, 'padrao' => '1'],
-                'valor_total' => ['rotulo' => 'Valor total (R$)', 'tipo' => 'dinheiro', 'obrigatorio' => true, 'min' => 0],
-                'comprador' => ['rotulo' => 'Comprador', 'tipo' => 'texto', 'max' => 120],
-                'animal_id' => ['rotulo' => 'Animal (brinco, se for um só)', 'tipo' => 'animal',
-                    'ajuda' => 'O animal passa para a situação "vendido".'],
-                'observacoes' => ['rotulo' => 'Observações', 'tipo' => 'texto', 'max' => 255],
+                'data' => ['rotulo' => 'Data', 'tipo' => 'date', 'obrigatorio' => true],
+                'animal_id' => ['rotulo' => 'Animal', 'tipo' => 'animal', 'so_ativos' => true],
+                'item' => ['rotulo' => 'Item', 'obrigatorio' => true, 'max' => 255],
+                'quantidade' => ['rotulo' => 'Quantidade', 'tipo' => 'number', 'obrigatorio' => true],
+                'valor' => ['rotulo' => 'Valor total', 'tipo' => 'number', 'obrigatorio' => true],
+                'comprador' => ['rotulo' => 'Comprador', 'max' => 160],
+                'categoria' => ['rotulo' => 'Categoria', 'obrigatorio' => true, 'max' => 120],
+                'observacao' => ['rotulo' => 'Observação', 'tipo' => 'textarea'],
             ],
-            'colunas' => ['data', 'descricao', 'quantidade', 'comprador', 'valor_total'],
-            'total' => 'valor_total',
-            'depois_salvar' => function (int $id, array $d): void {
-                sincronizar_lancamento('venda', $id, $d);
-                if (!empty($d['animal_id'])) {
-                    q("UPDATE animais SET situacao = 'vendido', atualizado_em = ? WHERE id = ? AND propriedade_id = ?", [date('Y-m-d H:i:s'), $d['animal_id'], propriedade()['id']]);
-                }
-            },
-            'depois_excluir' => fn(int $id) => q("DELETE FROM movimentacoes WHERE origem = 'venda' AND origem_id = ? AND propriedade_id = ?", [$id, propriedade()['id']]),
-        ],
-
-        'movimentacoes' => [
-            'titulo' => 'Entradas e saídas', 'singular' => 'lançamento', 'grupo' => 'Financeiro',
-            'ordem' => 't.data DESC, t.id DESC', 'busca' => ['t.descricao', 't.categoria'], 'data' => 'data',
-            'campos' => [
-                'data' => ['rotulo' => 'Data', 'tipo' => 'data', 'obrigatorio' => true, 'padrao_hoje' => true],
-                'tipo' => ['rotulo' => 'Tipo', 'tipo' => 'opcao', 'obrigatorio' => true, 'opcoes' => ['entrada' => 'Entrada (receita)', 'saida' => 'Saída (despesa)']],
-                'categoria' => ['rotulo' => 'Categoria', 'tipo' => 'texto', 'obrigatorio' => true, 'max' => 60,
-                    'sugestoes' => ['Venda de leite', 'Venda de animais', 'Ração e sal', 'Medicamentos', 'Mão de obra', 'Combustível', 'Energia', 'Manutenção', 'Arrendamento', 'Impostos', 'Outros']],
-                'descricao' => ['rotulo' => 'Descrição', 'tipo' => 'texto', 'max' => 160],
-                'valor' => ['rotulo' => 'Valor (R$)', 'tipo' => 'dinheiro', 'obrigatorio' => true, 'min' => 0.01],
-            ],
-            'colunas' => ['data', 'tipo', 'categoria', 'descricao', 'valor'],
-            'filtros' => ['tipo'],
-            'saldo' => true,
-            'travado' => fn(array $linha): ?string => $linha['origem'] !== 'manual'
-                ? 'Este lançamento veio de uma ' . $linha['origem'] . '. Altere ou exclua pela tela de ' . ($linha['origem'] === 'compra' ? 'compras' : 'vendas') . '.'
-                : null,
+            'abas' => ['compras' => 'Compras', 'vendas' => 'Vendas'],
         ],
     ];
-    return $m;
-}
-
-/** "o" ou "a", conforme o nome do registro: novo animal, nova vacinação. */
-function g(array $m, string $o = 'o', string $a = 'a'): string
-{
-    return empty($m['feminino']) ? $o : $a;
-}
-
-function modulo(string $slug): ?array
-{
-    $m = modulos()[$slug] ?? null;
-    if ($m) $m['slug'] = $slug;
-    return $m;
-}
-
-/** Tabelas que podem ser escolhidas em campos "ref", e a coluna mostrada. */
-function rotulo_ref(string $tabela): string
-{
-    return match ($tabela) {
-        'lotes', 'tipos_vacinas' => 'nome',
-        'animais' => 'brinco',
-        default => throw new LogicException("Tabela sem rótulo: $tabela"),
-    };
-}
-
-/** Compra e venda geram um lançamento no financeiro (e o mantêm igual quando são editadas). */
-function sincronizar_lancamento(string $origem, int $id, array $d): void
-{
-    $prop = propriedade()['id'];
-    $dados = [
-        'data' => $d['data'],
-        'tipo' => $origem === 'venda' ? 'entrada' : 'saida',
-        'categoria' => $origem === 'venda' ? 'Venda' : 'Compra',
-        'descricao' => mb_substr($d['descricao'], 0, 160),
-        'valor' => $d['valor_total'],
-    ];
-    $existente = valor('SELECT id FROM movimentacoes WHERE origem = ? AND origem_id = ? AND propriedade_id = ?', [$origem, $id, $prop]);
-    if ($existente) {
-        atualizar('movimentacoes', $dados, 'id = ?', [$existente]);
-    } else {
-        inserir('movimentacoes', $dados + ['propriedade_id' => $prop, 'origem' => $origem, 'origem_id' => $id]);
+    foreach ($m as $chave => &$cfg) {
+        $cfg['chave'] = $chave;
+        $cfg['secao'] ??= $chave;
+        $cfg['ordem'] ??= 't.' . (campo_data($cfg) ?? 'created_at') . ' DESC, t.created_at DESC';
     }
+    return $m;
+}
+
+function modulo(string $chave): ?array
+{
+    return modulos()[$chave] ?? null;
+}
+
+/** Primeiro campo de data do cadastro (usado no filtro de período e na ordem). */
+function campo_data(array $m): ?string
+{
+    foreach ($m['campos'] as $k => $c) if (($c['tipo'] ?? 'text') === 'date') return $k;
+    return null;
+}
+
+/** Selo de situação: sempre ícone + texto. */
+function selos(): array
+{
+    return [
+        'vencida' => ['Atrasada', 'alerta', 'triangle-exclamation-point'], 'proxima' => ['Vence logo', 'aviso', 'clock-3'],
+        'em_dia' => ['Em dia', 'pasto', 'check'], 'substituida' => ['Reforço aplicado', 'cinza', 'repeat-2'],
+        'ativo' => ['Ativo', 'pasto', 'check'], 'vendido' => ['Vendido', 'cinza', 'tag'], 'perdido' => ['Perdido', 'alerta', 'circle-x'],
+        'falecido' => ['Morto', 'alerta', 'circle-x'], 'transferido' => ['Transferido', 'cinza', 'arrow-right-left'],
+        'em_andamento' => ['Em andamento', 'aviso', 'clock-3'], 'confirmada' => ['Confirmada', 'pasto', 'check'], 'falhou' => ['Falhou', 'alerta', 'circle-x'],
+        'parto_realizado' => ['Parto realizado', 'pasto', 'check'], 'cancelada' => ['Cancelada', 'cinza', 'circle-x'],
+        'receita' => ['Receita', 'pasto', 'arrow-down-left'], 'despesa' => ['Despesa', 'alerta', 'arrow-up-right'], 'investimento' => ['Investimento', 'cinza', 'trending-up'],
+        'aprovado' => ['Aprovado', 'pasto', 'check'], 'pendente' => ['Em análise', 'aviso', 'clock-3'], 'recusado' => ['Recusado', 'alerta', 'circle-x'],
+        'estornado' => ['Estornado', 'cinza', 'repeat-2'], 'expirado' => ['Vencido', 'aviso', 'clock-3'],
+        'aberto' => ['Aguardando resposta', 'aviso', 'clock-3'], 'respondido' => ['Respondido', 'pasto', 'check'], 'fechado' => ['Encerrado', 'cinza', 'check'],
+        'inativo' => ['Inativo', 'cinza', 'circle-x'],
+    ];
 }

@@ -1,94 +1,78 @@
 # Pecuária Digital (PHP + MySQL)
 
-Sistema web de gestão pecuária: rebanho, lotes, pesagens com ganho por dia, vacinas com próxima dose,
-inseminações com previsão de parto, nascimentos, produção de leite, compras, vendas, entradas e saídas,
-agenda, relatórios, planilhas e equipe com níveis de acesso. Funciona no celular e no computador.
+O sistema Pecuária Digital refeito em **PHP + MySQL**, para rodar em **VPS Linux com acesso root**
+(ex.: VPS1 da Combinário: 4 vCores, 8 GB, só SSH, sem painel).
 
-- **PHP 8.1+** sem framework e sem Composer: é só copiar e rodar.
-- **MySQL 8 ou MariaDB 10.5+**.
-- **Nginx + PHP-FPM**, feito para **VPS Linux com acesso root** (ex.: VPS1 da Combinário: 4 vCores, 8 GB, Linux, só SSH).
+- **Mesmo visual do original** ("Brinco e pasto"): menu verde-curral, números no brinco amarelo, fontes
+  Big Shoulders e Atkinson Hyperlegible, tema claro e escuro, barra de baixo com "Lançar" no celular.
+- **Mesmos nomes de tabelas e campos** do banco original (Supabase), com identificadores UUID: dá para trazer os dados de lá.
+- PHP 8.1+ sem framework e sem Composer; MySQL 8 ou MariaDB 10.5+; Nginx + PHP-FPM.
 
-## Instalar na VPS (uns 10 minutos)
+## O que já está pronto
 
-Você vai precisar do **IP** e da **senha root** que a hospedagem manda por e-mail. Peça **Ubuntu 24.04**
-(ou 22.04, ou Debian 12) como sistema.
+| Etapa | Situação |
+| --- | --- |
+| 1. Visual, entrada e cadastros: Início, Agenda, Meu rebanho (com ficha), Lotes, Evolução dos bezerros, Vacinação (aplicações e tipos), Inseminação, Nascimentos, Leite e anotações, Lucros e investimentos, Compra e venda, Avisos, Busca (Ctrl K), Dados da propriedade | **Pronto** |
+| 2. Relatórios, Indicadores, Calculadoras e clima, Importar planilha, Diagnóstico dos dados | Próxima |
+| 3. Meu perfil (foto), logo e banner da propriedade, senha e duas etapas, aparelhos conectados, recuperar senha por e-mail, baixar meus dados, privacidade e termos | Depois |
+| 4. Assinatura (Mercado Pago), Biblioteca de eBooks, Use no celular, Ajuda e suporte | Depois |
+| 5. Área do administrador e a assistente Yui | Depois |
 
-1. **(Opcional) Domínio:** no painel onde você registrou o domínio, crie um registro **A** apontando para o IP da VPS.
-   Sem domínio, o site funciona pelo IP, só que sem HTTPS.
-2. **Entre na VPS pelo SSH.** No computador: `ssh root@IP-DA-VPS`. No celular Android, use um app de SSH
-   (Termius ou JuiceSSH) com o mesmo IP, usuário `root` e a senha.
-3. **Baixe o site e instale:**
+As áreas das próximas etapas não aparecem no menu até ficarem prontas.
+
+## Instalar na VPS
+
+Peça **Ubuntu 24.04** (ou 22.04, ou Debian 12) à hospedagem. Você recebe o **IP** e a **senha root**.
+
+1. (Opcional) No registro do domínio, crie um registro **A** apontando para o IP da VPS.
+2. Entre na VPS: no computador, `ssh root@IP-DA-VPS`; no celular Android, um app de SSH (Termius ou JuiceSSH).
+3. Rode:
 
    ```bash
    apt-get update && apt-get install -y git
-   git clone https://github.com/sakueaffsakura-sys/pecuaria-digital.git /opt/pecuaria-digital
+   git clone https://github.com/sakueaffsakura-sys/Pecu-ria-digital.git /opt/pecuaria-digital
    cd /opt/pecuaria-digital
-   bash deploy/instalar.sh seudominio.com.br seu-email@exemplo.com
+   bash deploy/instalar.sh seudominio.com.br seu-email@exemplo.com     # ou: bash deploy/instalar.sh IP-DA-VPS
    ```
 
-   Sem domínio: `bash deploy/instalar.sh IP-DA-VPS`.
-   Repositório privado: o `git clone` pede usuário e um *token* do GitHub
-   (github.com → Settings → Developer settings → Personal access tokens) no lugar da senha.
+   Repositório privado: o `git clone` pede o usuário e um *token* do GitHub no lugar da senha
+   (github.com → Settings → Developer settings → Personal access tokens).
+4. Abra o endereço e clique em **Criar conta**. **A primeira conta criada vira a administradora do site.**
+5. Quer ver com dados de exemplo? `php /var/www/pecuaria/scripts/demonstracao.php seu-email "Fazenda Demonstração"`
 
-4. Abra o endereço no navegador e clique em **Criar conta**. **A primeira conta criada vira a administradora do site.**
-
-O script instala e configura sozinho: Nginx, PHP-FPM, MariaDB (com usuário e senha aleatória só para o site),
-firewall (só SSH, HTTP e HTTPS), certificado HTTPS grátis, atualizações automáticas de segurança e backup diário.
-
-## Dia a dia do servidor
+O instalador configura Nginx, PHP-FPM, MariaDB (usuário e senha aleatória só para o site), firewall,
+HTTPS grátis (com domínio), atualizações automáticas de segurança e backup diário do banco.
 
 | O quê | Como |
 | --- | --- |
-| Atualizar o site | `cd /opt/pecuaria-digital && git pull && bash deploy/instalar.sh seudominio.com.br seu-email` |
-| Backups | Todo dia às 03:17 em `/var/backups/pecuaria/` (guarda 14 dias). **Copie para fora da VPS de vez em quando** — o backup da hospedagem é contratado à parte. |
-| Restaurar um backup | `gunzip -c /var/backups/pecuaria/pecuaria-AAAA-MM-DD.sql.gz \| mysql -u root pecuaria` |
-| Senha esquecida | Um administrador abre **Administração → Nova senha** e passa a senha provisória para a pessoa. |
-| Fechar o cadastro | Em `/var/www/pecuaria/config/config.php`, mude `'cadastro_aberto' => false`. |
-| Ver erros | `tail -f /var/log/nginx/error.log` |
+| Atualizar | `cd /opt/pecuaria-digital && git pull && bash deploy/instalar.sh seudominio.com.br seu-email` |
+| Backups | Todo dia às 03:17 em `/var/backups/pecuaria/` (14 dias). Copie para fora da VPS de vez em quando. |
+| Restaurar | `gunzip -c /var/backups/pecuaria/pecuaria-AAAA-MM-DD.sql.gz \| mysql -u root pecuaria` |
+| Erros | `tail -f /var/log/nginx/error.log` |
 
-## O que tem no sistema
+## Regras que vieram do original
 
-- **Início:** animais ativos, vacinas vencidas, partos previstos, leite dos últimos 30 dias, saldo do mês e gráficos.
-- **Rebanho:** animais (ficha com peso, ganho por dia, vacinas, reprodução e crias), lotes, pesagens e importação de planilha CSV.
-- **Sanidade:** vacinação por animal ou por lote, com a próxima dose calculada pelo intervalo da vacina.
-- **Reprodução:** inseminação (IA, IATF, monta, TE), diagnóstico, previsão de parto pelo período de gestação da propriedade,
-  e parto que já cadastra a cria com a mãe, o lote e o peso ao nascer.
-- **Leite:** por ordenha ou por vaca.
-- **Financeiro:** entradas e saídas; compras e vendas viram lançamentos sozinhas (e uma venda de animal muda a situação dele para "vendido").
-- **Agenda:** vacinas a aplicar, partos previstos e diagnósticos de prenhez atrasados.
-- **Relatórios por período**, para imprimir ou salvar em PDF; toda lista pode ser baixada como planilha.
-- **Equipe:** o dono dá acesso a outras contas como "pode lançar e editar" ou "só consulta".
-- **Administração:** contas, bloqueio, administradores e senha provisória.
+- Campos de animal, lote e vacina são **digitados** (brinco ou nome). Se não existir, o cadastro é criado sozinho.
+- Inseminação sem previsão de parto: data + período de gestação da propriedade (283 dias por padrão).
+- Vacina sem próxima dose: data + intervalo do tipo de vacina. "Atrasada" só conta a **última** dose de cada vacina por animal ou lote.
+- Compra vira despesa e venda vira receita no financeiro (um lançamento por operação; editar atualiza, excluir apaga).
+  O animal vendido sai do rebanho ativo e do lote; se a venda for excluída, ele volta a ser ativo.
+- Nascimento liga o bezerro à vaca e ao lote; excluir o nascimento desfaz a ligação.
+- Leite: o total em reais (litros × valor por litro) é calculado pelo banco.
+- Avisos: vacinas atrasadas, partos em 15 dias, queda de 20% no leite da semana e animais jovens sem pesagem há 60 dias.
+  "Marcar como visto" esconde aquela situação até ela mudar.
 
 ## Segurança
 
-- Senhas com `password_hash` (bcrypt); sessão com cookie `HttpOnly`, `SameSite=Lax` e `Secure` no HTTPS.
-- Todo formulário tem token contra CSRF; toda consulta usa parâmetros (sem SQL montado com texto do usuário).
-- Toda leitura e gravação filtra pela propriedade em uso **e** confere se a pessoa é membro dela.
-- Limite de tentativas de senha no banco (por IP e por e-mail) e campo-armadilha contra robôs no cadastro.
-- Cabeçalhos de segurança (CSP sem script de fora, `X-Frame-Options`, `nosniff`); só o `public/index.php` é executável;
-  `config/config.php` fica fora da pasta pública; limite de pedidos por IP no Nginx.
+Senhas com bcrypt; sessão por aparelho (dá para encerrar); cookie `HttpOnly`/`SameSite` e `Secure` no HTTPS;
+token contra CSRF em todo formulário; consultas sempre com parâmetros; toda leitura e gravação filtra pela propriedade
+e confere se a pessoa é dona ou membro; "Só consulta" não grava; limite de tentativas no banco; cabeçalhos de segurança
+(CSP sem script de fora); só o `public/index.php` executa; `config/config.php` fora da pasta pública.
 
-## Estrutura
-
-```
-public/            pasta pública (index.php, assets/)
-app/               núcleo (banco, sessão, acesso), módulos, CRUD, gráficos, rotas/
-views/             telas
-database/schema.sql
-deploy/            instalar.sh, nginx.conf, backup.sh
-tests/e2e.php      teste de ponta a ponta
-config/config.example.php
-```
-
-Para criar um cadastro novo, acrescente um item em `app/modulos.php` (tabela, campos e colunas), crie a tabela em
-`database/schema.sql` e o link em `menu()` de `app/ui.php`. Lista, filtros, formulário, validação, exclusão e planilha saem prontos.
-
-## Rodar no seu computador e testar
+## Testar
 
 ```bash
-php tests/e2e.php      # 61 verificações; sobe o site com um banco SQLite temporário, não precisa de MySQL
+php tests/e2e.php    # sobe o site com um banco SQLite temporário e faz o caminho de um usuário (62 verificações)
 ```
 
-Para usar de verdade no computador: crie um banco MySQL, aplique `database/schema.sql`, copie
-`config/config.example.php` para `config/config.php`, preencha e rode `php -S localhost:8000 -t public public/index.php`.
+Ícones: [Lucide](https://lucide.dev) (ISC). Fontes: Atkinson Hyperlegible Next e Big Shoulders Display (SIL OFL), servidas pelo próprio site.

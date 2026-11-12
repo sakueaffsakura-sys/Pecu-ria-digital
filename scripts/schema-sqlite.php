@@ -4,7 +4,7 @@
 $sql = file_get_contents(__DIR__ . '/../database/schema.sql');
 $sql = preg_replace('/^--.*$/m', '', $sql);
 $sql = preg_replace('/^SET .*;$/m', '', $sql);
-$sql = str_replace('INT UNSIGNED AUTO_INCREMENT PRIMARY KEY', 'INTEGER PRIMARY KEY AUTOINCREMENT', $sql);
+$sql = preg_replace('/(BIG)?INT UNSIGNED AUTO_INCREMENT PRIMARY KEY/', 'INTEGER PRIMARY KEY AUTOINCREMENT', $sql);
 $sql = str_replace('INT UNSIGNED', 'INTEGER', $sql);
 $sql = preg_replace('/\)\s*ENGINE=[^;]*;/', ');', $sql);
 $sql = preg_replace('/UNIQUE KEY \w+ \(/', 'UNIQUE (', $sql);

@@ -4,9 +4,11 @@ declare(strict_types=1);
 require __DIR__ . '/nucleo.php';
 require __DIR__ . '/acesso.php';
 require __DIR__ . '/modulos.php';
+require __DIR__ . '/regras.php';
 require __DIR__ . '/crud.php';
 require __DIR__ . '/graficos.php';
 require __DIR__ . '/ui.php';
+require __DIR__ . '/totp.php';
 foreach (glob(__DIR__ . '/rotas/*.php') as $arquivo) require $arquivo;
 
 date_default_timezone_set((string) (config('fuso') ?: 'America/Sao_Paulo'));

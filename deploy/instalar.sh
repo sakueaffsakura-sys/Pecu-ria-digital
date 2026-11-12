@@ -56,7 +56,8 @@ INI
 
 passo "Copiando o site para $PASTA"
 mkdir -p "$PASTA"
-rsync -a --delete --exclude '.git' --exclude 'tests' --exclude 'config/config.php' "$ORIGEM/" "$PASTA/"
+rsync -a --delete --exclude '.git' --exclude 'tests' --exclude 'config/config.php' --exclude 'storage' "$ORIGEM/" "$PASTA/"
+mkdir -p "$PASTA/storage"
 
 passo "Banco de dados"
 if [ ! -f "$PASTA/config/config.php" ]; then
@@ -81,7 +82,6 @@ return [
     ],
     'debug' => false,
     'fuso' => 'America/Sao_Paulo',
-    'cadastro_aberto' => true,
 ];
 PHP
   echo "config/config.php criado com uma senha de banco aleatória."
@@ -95,6 +95,7 @@ chown -R root:www-data "$PASTA"
 find "$PASTA" -type d -exec chmod 750 {} \;
 find "$PASTA" -type f -exec chmod 640 {} \;
 chmod 755 "$PASTA/deploy/"*.sh
+chmod 770 "$PASTA/storage"
 
 passo "Configurando o Nginx"
 cat > /etc/nginx/conf.d/pecuaria-limite.conf <<'NGX'
@@ -136,6 +137,8 @@ passo "Pronto!"
 cat <<FIM
 Abra $ENDERECO e clique em "Criar conta".
 A PRIMEIRA conta criada vira a administradora do site — crie a sua agora.
+Quer ver o sistema com dados de exemplo? Depois de criar a conta:
+  php $PASTA/scripts/demonstracao.php seu-email@exemplo.com "Fazenda Demonstração"
 
 Backups ficam em /var/backups/pecuaria (copie para fora da VPS de vez em quando).
 Para atualizar depois: cd $ORIGEM && git pull && bash deploy/instalar.sh $DOMINIO $EMAIL
