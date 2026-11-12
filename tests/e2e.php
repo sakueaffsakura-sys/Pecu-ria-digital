@@ -40,7 +40,7 @@ final class Nav
     {
         $ch = curl_init("http://127.0.0.1:{$this->porta}$c");
         curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_COOKIEJAR => $this->cookies, CURLOPT_COOKIEFILE => $this->cookies, CURLOPT_FOLLOWLOCATION => true]);
-        if ($post !== null) curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => http_build_query($post)]);
+        if ($post !== null) curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => array_filter($post, fn($v) => $v instanceof CURLFile) ? $post : http_build_query($post)]);
         $this->html = (string) curl_exec($ch);
         $this->status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $u = (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
@@ -208,6 +208,42 @@ $b->ir('/propriedade/trocar', ['_csrf' => $b->csrf(), 'id' => $prop, 'volta' => 
 ok($b->tem('Mimosa') && $b->tem('acesso só de consulta'), 'quem só consulta vê a fazenda');
 $b->ir('/app/rebanho', ['_csrf' => $b->csrf(), 'acao' => 'salvar', 'numero_brinco' => '777', 'sexo' => 'F', 'situacao' => 'ativo']);
 ok($b->status === 403 && !$um("SELECT 1 AS x FROM animais WHERE numero_brinco = '777'"), 'quem só consulta não grava');
+
+// ---------- Etapa 2: relatórios, indicadores, diagnóstico, ferramentas, importação ----------
+foreach (['relatorios' => 'Relatórios', 'indicadores' => 'Indicadores', 'diagnostico' => 'Diagnóstico', 'ferramentas' => 'Calculadoras'] as $sec => $txt) {
+    $a->ir("/app/$sec");
+    ok($a->status === 200 && $a->tem($txt), "abre $sec");
+}
+$a->ir('/app/relatorios?tipo=ano&ano=' . date('Y'));
+ok($a->status === 200 && $a->tem(date('Y')), 'relatório anual');
+$a->ir('/app/relatorios?exportar=csv');
+ok($a->status === 200 && str_contains($a->html, ';') && !str_contains($a->html, '<html'), 'exporta relatório em CSV');
+$a->ir('/api/clima/lugares?nome=ab');
+ok($a->status === 400 && (json_decode($a->html, true)['ok'] ?? null) === false, 'clima pede nome com 3 letras');
+$a->ir('/api/clima/agora?lat=200&lon=0');
+ok($a->status === 400, 'clima recusa lugar inválido');
+
+$csv = "$tmp/animais.csv";
+file_put_contents($csv, "Brinco;Nome;Sexo;Situação;Nascimento\n3001;Estrela;Fêmea;ativo;10/02/2022\n3002;Lua;F;;2023-05-01\n1100;Repetida;F;ativo;\n3003;Errada;X;ativo;\n3004;Sem lote;F;ativo;\n");
+$a->ir('/app/rebanho');
+$a->ir('/app/rebanho', ['_csrf' => $a->csrf(), 'acao' => 'importar_analisar', 'arquivo' => new CURLFile($csv, 'text/csv', 'animais.csv')]);
+ok($a->tem('Total de linhas') && $a->tem('Importar 3 registros') && $a->tem('Linha 4'), 'importação mostra prévia (' . (preg_match('/Importar (\d+) registros/', $a->html, $mm) ? $mm[1] : '?') . ' válidas)');
+preg_match('/name="importacao" value="([^"]+)"/', $a->html, $mi);
+$antes = $um('SELECT COUNT(*) AS n FROM animais WHERE propriedade_id = ?', [$prop])['n'];
+$a->ir('/app/rebanho', ['_csrf' => $a->csrf(), 'acao' => 'importar_iniciar', 'importacao' => $mi[1] ?? '']);
+$depois = $um('SELECT COUNT(*) AS n FROM animais WHERE propriedade_id = ?', [$prop])['n'];
+ok($a->tem('Adicionados') && $depois - $antes === 3, 'importa só as linhas novas e válidas (+' . ($depois - $antes) . ')');
+ok($a->tem('Duplicados ignorados') && !$um("SELECT 1 AS x FROM animais WHERE nome = 'Repetida'"), 'não duplica brinco existente');
+ok(($um("SELECT data_nascimento FROM animais WHERE numero_brinco = '3001'")['data_nascimento'] ?? '') === '2022-02-10', 'importação entende data brasileira');
+$a->ir('/app/rebanho', ['_csrf' => $a->csrf(), 'acao' => 'importar_iniciar', 'importacao' => $mi[1] ?? '']);
+ok($a->tem('erro-forte') || $a->tem('não encontrad') || $a->tem('expir'), 'não importa o mesmo arquivo duas vezes');
+file_put_contents("$tmp/ruim.csv", "a;b\n");
+$a->ir('/app/rebanho', ['_csrf' => $a->csrf(), 'acao' => 'importar_analisar', 'arquivo' => new CURLFile("$tmp/ruim.csv", 'text/csv', 'ruim.csv')]);
+ok($a->tem('erro-forte'), 'arquivo sem colunas reconhecidas dá erro claro');
+file_put_contents("$tmp/vac.csv", "animal;vacina;data\nNinguém;Aftosa;2026-01-10\n");
+$a->ir('/app/vacinacao');
+$a->ir('/app/vacinacao', ['_csrf' => $a->csrf(), 'acao' => 'importar_analisar', 'arquivo' => new CURLFile("$tmp/vac.csv", 'text/csv', 'vac.csv')]);
+ok($a->tem('Cadastro não encontrado') && !$um("SELECT 1 AS x FROM animais WHERE nome = 'Ninguém' OR numero_brinco = 'Ninguém'"), 'importação não cria animal inexistente');
 
 $c = new Nav("$tmp/c.txt", $porta);
 for ($i = 0; $i < 10; $i++) $c->enviar('/', ['acao' => 'entrar', 'email' => 'ana@ex.com', 'senha' => 'errada' . $i]);

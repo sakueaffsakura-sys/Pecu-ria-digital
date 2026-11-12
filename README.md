@@ -13,8 +13,8 @@ O sistema Pecuária Digital refeito em **PHP + MySQL**, para rodar em **VPS Linu
 | Etapa | Situação |
 | --- | --- |
 | 1. Visual, entrada e cadastros: Início, Agenda, Meu rebanho (com ficha), Lotes, Evolução dos bezerros, Vacinação (aplicações e tipos), Inseminação, Nascimentos, Leite e anotações, Lucros e investimentos, Compra e venda, Avisos, Busca (Ctrl K), Dados da propriedade | **Pronto** |
-| 2. Relatórios, Indicadores, Calculadoras e clima, Importar planilha, Diagnóstico dos dados | Próxima |
-| 3. Meu perfil (foto), logo e banner da propriedade, senha e duas etapas, aparelhos conectados, recuperar senha por e-mail, baixar meus dados, privacidade e termos | Depois |
+| 2. Relatórios, Indicadores, Calculadoras e clima, Importar planilha, Diagnóstico dos dados | Pronta |
+| 3. Meu perfil (foto), logo e banner da propriedade, senha e duas etapas, aparelhos conectados, recuperar senha por e-mail, baixar meus dados, privacidade e termos | Próxima |
 | 4. Assinatura (Mercado Pago), Biblioteca de eBooks, Use no celular, Ajuda e suporte | Depois |
 | 5. Área do administrador e a assistente Yui | Depois |
 

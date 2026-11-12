@@ -528,3 +528,105 @@ main#conteudo { width: 100%; max-width: 1400px; margin: 0 auto; padding: 1.25rem
   .area { padding-left: 0 !important; }
   body { background: #fff; color: #000; }
 }
+
+/* Barras deitadas: largura em classes (o site não usa estilo embutido). */
+.largura-1{width:1%}.largura-2{width:2%}.largura-3{width:3%}.largura-4{width:4%}.largura-5{width:5%}.largura-6{width:6%}.largura-7{width:7%}.largura-8{width:8%}.largura-9{width:9%}.largura-10{width:10%}.largura-11{width:11%}.largura-12{width:12%}.largura-13{width:13%}.largura-14{width:14%}.largura-15{width:15%}.largura-16{width:16%}.largura-17{width:17%}.largura-18{width:18%}.largura-19{width:19%}.largura-20{width:20%}.largura-21{width:21%}.largura-22{width:22%}.largura-23{width:23%}.largura-24{width:24%}.largura-25{width:25%}.largura-26{width:26%}.largura-27{width:27%}.largura-28{width:28%}.largura-29{width:29%}.largura-30{width:30%}.largura-31{width:31%}.largura-32{width:32%}.largura-33{width:33%}.largura-34{width:34%}.largura-35{width:35%}.largura-36{width:36%}.largura-37{width:37%}.largura-38{width:38%}.largura-39{width:39%}.largura-40{width:40%}.largura-41{width:41%}.largura-42{width:42%}.largura-43{width:43%}.largura-44{width:44%}.largura-45{width:45%}.largura-46{width:46%}.largura-47{width:47%}.largura-48{width:48%}.largura-49{width:49%}.largura-50{width:50%}.largura-51{width:51%}.largura-52{width:52%}.largura-53{width:53%}.largura-54{width:54%}.largura-55{width:55%}.largura-56{width:56%}.largura-57{width:57%}.largura-58{width:58%}.largura-59{width:59%}.largura-60{width:60%}.largura-61{width:61%}.largura-62{width:62%}.largura-63{width:63%}.largura-64{width:64%}.largura-65{width:65%}.largura-66{width:66%}.largura-67{width:67%}.largura-68{width:68%}.largura-69{width:69%}.largura-70{width:70%}.largura-71{width:71%}.largura-72{width:72%}.largura-73{width:73%}.largura-74{width:74%}.largura-75{width:75%}.largura-76{width:76%}.largura-77{width:77%}.largura-78{width:78%}.largura-79{width:79%}.largura-80{width:80%}.largura-81{width:81%}.largura-82{width:82%}.largura-83{width:83%}.largura-84{width:84%}.largura-85{width:85%}.largura-86{width:86%}.largura-87{width:87%}.largura-88{width:88%}.largura-89{width:89%}.largura-90{width:90%}.largura-91{width:91%}.largura-92{width:92%}.largura-93{width:93%}.largura-94{width:94%}.largura-95{width:95%}.largura-96{width:96%}.largura-97{width:97%}.largura-98{width:98%}.largura-99{width:99%}.largura-100{width:100%}
+
+/* ---------- Métricas e relatórios ---------- */
+.metrica { display: block; min-width: 0; padding: 1rem; }
+.metrica-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+.metrica-valor { display: block; margin-top: .5rem; font-family: var(--fonte-titulo); font-size: 2.1rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.metrica-dica { display: block; margin-top: .5rem; }
+.tom-alerta .metrica-valor { color: var(--alerta); }
+.delta { font-size: .875rem; font-weight: 700; }
+.delta-bom { color: var(--pasto); } .delta-ruim { color: var(--alerta); }
+.grade-metricas { display: grid; gap: .75rem; }
+@media (min-width: 640px) { .grade-metricas { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1280px) { .grade-metricas { grid-template-columns: repeat(4, 1fr); } .grade-metricas.tres { grid-template-columns: repeat(3, 1fr); } }
+.painel-cabeca { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
+.painel-cabeca p { margin-top: .25rem; }
+.filtro-relatorio { display: grid; gap: 1rem; padding: 1rem; }
+.filtro-passo { margin-bottom: .5rem; font-size: .875rem; font-weight: 700; color: var(--suave); }
+.linha-botoes { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.linha-botoes select { width: auto; min-width: 7rem; }
+.botao-escolha { min-height: 2.5rem; padding: 0 .875rem; font-size: .9375rem; }
+.botao-escolha[aria-pressed=true] { background: var(--pasto); border-color: var(--pasto); color: var(--primario-texto); }
+.chip-periodo { margin-left: auto; padding: .25rem .75rem; border-radius: 99px; background: color-mix(in oklab, var(--pasto) 15%, transparent); color: var(--pasto); font-size: .875rem; font-weight: 700; }
+.selo-premium { display: inline-flex; align-items: center; gap: .25rem; padding: .25rem .5rem; border-radius: 99px; background: color-mix(in oklab, #2b6f9e 15%, transparent); color: #2b6f9e; font-size: .875rem; font-weight: 700; }
+html.dark .selo-premium { color: #6fb3e0; }
+.sem-dados { padding: 2.5rem 1rem; text-align: center; border: 1px dashed var(--linha); border-radius: 12px; background: var(--cartao); }
+.sem-dados .ic { margin: 0 auto .75rem; width: 2rem; height: 2rem; color: var(--suave); }
+.tabela-relatorio { max-height: 30rem; overflow: auto; border: 1px solid var(--linha); border-radius: 12px; }
+.tabela-relatorio table { width: 100%; min-width: 35rem; border-collapse: collapse; font-size: .9375rem; }
+.tabela-relatorio th { position: sticky; top: 0; background: var(--cartao); padding: .5rem .75rem; text-align: left; color: var(--suave); border-bottom: 1px solid var(--linha); }
+.tabela-relatorio td { padding: .5rem .75rem; border-bottom: 1px solid var(--linha); }
+.grafico-c1 .col-pos { fill: var(--grafico-positivo); } .grafico-c2 .col-pos { fill: #7e4fa3; } .grafico-c3 .col-pos { fill: #9a5b1e; }
+html.dark .grafico-c2 .col-pos { fill: #9a7edb; } html.dark .grafico-c3 .col-pos { fill: #e39a5a; }
+.legenda { display: flex; flex-wrap: wrap; align-items: center; gap: .375rem; margin-top: .5rem; font-size: .875rem; color: var(--suave); }
+.ponto { display: inline-block; width: .75rem; height: .75rem; border-radius: 3px; margin-left: .5rem; }
+.ponto:first-child { margin-left: 0; }
+.ponto-pos { background: var(--grafico-positivo); } .ponto-neg { background: var(--grafico-negativo); }
+.barras-deitadas { list-style: none; padding: 0; margin: 0; display: grid; gap: .5rem; }
+.barras-deitadas li { display: grid; grid-template-columns: minmax(6rem, 10rem) 1fr auto; align-items: center; gap: .75rem; font-size: .9375rem; }
+.bd-trilho { height: 1.25rem; border-radius: 4px; background: var(--muted); overflow: hidden; }
+.bd-barra { display: block; height: 100%; background: #7e4fa3; border-radius: 4px; }
+html.dark .bd-barra { background: #9a7edb; }
+.bd-valor { font-variant-numeric: tabular-nums; font-weight: 700; }
+.indicadores { list-style: none; padding: 0; margin: .75rem 0 0; display: grid; gap: .75rem; }
+@media (min-width: 640px) { .indicadores { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1280px) { .indicadores { grid-template-columns: repeat(3, 1fr); } }
+.indicadores li { padding: 1rem; }
+.ind-valor { margin-top: .375rem; font-family: var(--fonte-titulo); font-size: 2.1rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.ind-valor small { margin-left: .25rem; font-family: var(--fonte); font-size: 1rem; font-weight: 700; color: var(--suave); }
+.ind-leitura { margin-top: .5rem; font-size: .875rem; font-weight: 700; color: var(--suave); }
+.ind-leitura.bom { color: var(--pasto); } .ind-leitura.ruim { color: var(--aviso-texto); }
+.secao-ind { margin-top: 2rem; } .secao-ind:first-of-type { margin-top: 0; }
+.titulo-com-icone { display: flex; align-items: center; gap: .5rem; }
+.titulo-com-icone .ic { width: 1.5rem; height: 1.5rem; color: var(--pasto); }
+
+/* ---------- Calculadoras e clima ---------- */
+.mb-8 { margin-bottom: 2rem; }
+.mt-1 { margin-top: .25rem; } .mt-2 { margin-top: .5rem; }
+.grade-contas { display: grid; gap: 1rem; align-items: start; }
+@media (min-width: 1280px) { .grade-contas { grid-template-columns: 1fr 1fr; } }
+.conta { display: flex; flex-direction: column; }
+.titulo-conta { display: flex; align-items: center; gap: .5rem; font-size: 1.35rem; }
+.grade-conta { display: grid; gap: .75rem; margin-top: .75rem; }
+@media (min-width: 640px) { .grade-conta { grid-template-columns: 1fr 1fr; } }
+.resultado-conta { display: block; margin-top: 1rem; padding: .75rem 1rem; border-radius: 12px; background: var(--sucesso-fundo); }
+.rc-valor { display: block; font-family: var(--fonte-titulo); font-size: 2rem; font-weight: 800; line-height: 1; color: var(--pasto); font-variant-numeric: tabular-nums; }
+.rc-detalhe { display: block; margin-top: .25rem; font-size: .875rem; color: color-mix(in oklab, var(--texto) 80%, transparent); }
+.linha-clima { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .5rem; }
+.linha-clima .campo { flex: 1 1 16rem; }
+.campo-busca.sem-limite { max-width: none; display: block; flex: none; }
+.linha-clima .campo > span:first-child { font-weight: 700; font-size: .9375rem; }
+.opcoes-clima { list-style: none; padding: 0; margin: .75rem 0 0; display: flex; flex-wrap: wrap; gap: .5rem; }
+.opcoes-clima[hidden] { display: none; }
+.clima-agora { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 1rem; }
+.clima-ic { width: 3.5rem; height: 3.5rem; color: var(--pasto); }
+.clima-grau { font-family: var(--fonte-titulo); font-size: 2.6rem; font-weight: 800; line-height: 1; }
+.clima-dias { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+@media (min-width: 640px) { .clima-dias { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1024px) { .clima-dias { grid-template-columns: repeat(7, 1fr); } }
+.clima-dias li { padding: .75rem; border: 1px solid var(--linha); border-radius: 12px; text-align: center; }
+.clima-dia-ic { width: 1.75rem; height: 1.75rem; margin: .375rem auto; color: var(--pasto); }
+.primeira-maiuscula::first-letter { text-transform: uppercase; }
+@keyframes gira { to { transform: rotate(360deg); } }
+.gira { display: inline-block; animation: gira 1s linear infinite; vertical-align: -4px; }
+.diag-linha { padding: .75rem 0; }
+.direita { text-align: right; }
+.checagem { display: flex; align-items: center; gap: .5rem; padding: 1rem; margin-bottom: .5rem; border: 1px solid var(--linha); border-radius: 12px; background: color-mix(in oklab, var(--muted) 30%, transparent); }
+.checagem .selo { margin-left: auto; }
+
+/* ---------- Importar planilha ---------- */
+.grade-stat { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+.stat-importar { padding: 1rem; border: 1px solid var(--linha); border-radius: 12px; background: color-mix(in oklab, var(--muted) 30%, transparent); text-align: center; }
+.stat-importar strong { display: block; font-size: 1.5rem; }
+.stat-importar span { font-size: .875rem; color: var(--suave); }
+.texto-verde { color: var(--pasto); } .texto-aviso { color: var(--aviso-texto); }
+.caixa-problemas { max-height: 11rem; overflow-y: auto; margin-top: 1rem; padding: .75rem; border: 1px solid var(--linha); border-radius: 12px; background: color-mix(in oklab, var(--muted) 30%, transparent); }
+.caixa-problemas.alta { max-height: 14rem; }
+.caixa-problemas p { display: flex; gap: .25rem; align-items: center; }
+.caixa-colunas { padding: .75rem; border: 1px solid var(--linha); border-radius: 12px; background: color-mix(in oklab, var(--muted) 30%, transparent); font-size: .875rem; color: var(--suave); overflow-wrap: anywhere; }
+[hidden] { display: none !important; }
+button[disabled] { opacity: .5; cursor: not-allowed; }

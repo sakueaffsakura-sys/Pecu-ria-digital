@@ -182,7 +182,7 @@ function resolver_ref(array $c, string $texto, ?string $atual, array $form): arr
         }
         return [$a['id'], null, false];
     }
-    if (!pode_editar()) return [null, 'Cadastro não encontrado.', false];
+    if (!pode_editar() || !empty($GLOBALS['IMPORTANDO'])) return [null, 'Cadastro não encontrado. Confira o nome ou deixe o campo vazio.', false];
     if ($tipo === 'animal') {
         $sexo = $c['sexo'] ?? (isset($c['sexo_do_campo']) && in_array($form[$c['sexo_do_campo']] ?? '', ['F', 'M'], true) ? $form[$c['sexo_do_campo']] : 'F');
         $id = inserir('animais', ['propriedade_id' => $p, 'numero_brinco' => mb_substr($texto, 0, 60), 'nome' => mb_substr($texto, 0, 120), 'sexo' => $sexo, 'situacao' => 'ativo', 'created_at' => agora(), 'updated_at' => agora()]);

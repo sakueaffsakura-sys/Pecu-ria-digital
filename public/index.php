@@ -39,6 +39,7 @@ function rotear(array $p): never
         $a === 'propriedade' && $n === 2 && $p[1] === 'nova' => rota_nova_propriedade(),
         $a === 'avisos' && $n === 2 && $p[1] === 'visto' => rota_aviso_visto(),
         $a === 'api' && $n === 2 && $p[1] === 'busca' => rota_api_busca(),
+        $a === 'api' && $n === 3 && $p[1] === 'clima' && in_array($p[2], ['lugares', 'agora'], true) => rota_api_clima($p[2]),
         $a === 'agenda.ics' && $n === 1 => rota_agenda_ics(),
         default => pagina_erro(404, 'O endereço pode estar errado. Volte ao Início e use o menu.'),
     };

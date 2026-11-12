@@ -222,9 +222,9 @@ function compacto(float $v): string
     return num_br($v, fmod($v, 1) == 0.0 ? 0 : 1);
 }
 
-function plural(int $n, string $um, string $varios): string
+function plural(int $n, string $um, ?string $varios = null): string
 {
-    return num_br($n) . ' ' . ($n === 1 ? $um : $varios);
+    return num_br($n) . ' ' . ($n === 1 ? $um : ($varios ?? $um . 's'));
 }
 
 /** Texto para a tela: códigos do banco ("em_andamento") perdem o "_"; o que a pessoa digitou fica igual. */

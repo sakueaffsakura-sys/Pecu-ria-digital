@@ -35,6 +35,10 @@ function rota_app(string $secao): never
     }
     if ($secao === 'inicio') rota_painel();
     if ($secao === 'agenda') rota_agenda();
+    if ($secao === 'relatorios') rota_relatorios();
+    if ($secao === 'indicadores') rota_indicadores();
+    if ($secao === 'diagnostico') rota_diagnostico();
+    if ($secao === 'ferramentas') rota_ferramentas();
     if ($secao === 'perfil-propriedade' || $secao === 'configuracoes') rota_dados_propriedade();
     $m = modulo_da_secao($secao, $_GET + $_POST);
     if (!$m) tela('area_inexistente', ['titulo' => 'Esta área não existe', 'secao' => $secao]);
@@ -48,10 +52,16 @@ function rota_cadastro(string $secao, array $m): never
     $base = '/app/' . $secao;
     $voltar = fn(array $extra = []) => url("app/$secao", array_filter(['aba' => $aba] + $extra));
     $form = null;
+    $importacao = null;
 
     if (eh_post()) {
         conferir_csrf();
         $acao = (string) ($_POST['acao'] ?? '');
+        if ($acao === 'importar_analisar' || $acao === 'importar_iniciar') {
+            exigir_edicao();
+            $importacao = $acao === 'importar_analisar' ? importar_analisar($m, $_FILES['arquivo'] ?? []) : importar_iniciar($m, (string) ($_POST['importacao'] ?? ''));
+            $importacao['passo'] = isset($importacao['erro']) ? 'erro' : ($acao === 'importar_analisar' ? 'previa' : 'pronto');
+        }
         $id = (string) ($_POST['id'] ?? '');
         $linha = $id !== '' ? crud_buscar($m, $id) : null;
         if ($id !== '' && !$linha) pagina_erro(404, 'Esse registro não foi encontrado nesta propriedade.');
@@ -67,7 +77,7 @@ function rota_cadastro(string $secao, array $m): never
             header('Location: ' . $voltar(array_intersect_key($_POST, ['aba_notas' => 1, 'busca' => 1])), true, 303);
             exit;
         }
-        if ($acao === 'salvar') {
+        if ($acao === 'salvar' && !isset($importacao)) {
             $r = crud_salvar($m, $linha, $_POST);
             if (isset($r['id'])) {
                 if ($r['criados']) aviso('ok', 'Cadastro criado automaticamente: ' . implode(', ', $r['criados']) . '.');
@@ -99,7 +109,7 @@ function rota_cadastro(string $secao, array $m): never
     $r = crud_listar($m, $_GET);
     $get = array_intersect_key($_GET, array_flip(['busca', 'periodo', 'dia', 'por', 'aba', 'aba_notas']));
     $lista_animais = $form ? lista_animais_form() : [];
-    tela($m['tabela'] === 'anotacoes_producao' ? 'anotacoes' : 'cadastro', compact('secao', 'm', 'r', 'form', 'ficha', 'get', 'base', 'aba', 'lista_animais') + ['titulo' => $m['titulo']]);
+    tela($m['tabela'] === 'anotacoes_producao' ? 'anotacoes' : 'cadastro', compact('secao', 'm', 'r', 'form', 'ficha', 'get', 'base', 'aba', 'lista_animais', 'importacao') + ['titulo' => $m['titulo']]);
 }
 
 /** Animais para as sugestões dos campos (brinco e nome). */

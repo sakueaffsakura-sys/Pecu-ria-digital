@@ -133,7 +133,7 @@ function grupos_menu(): array
 /** Seções que já existem nesta versão (as outras não aparecem no menu nem na busca). */
 function secoes_prontas(): array
 {
-    return ['inicio', 'agenda', 'rebanho', 'lotes', 'bezerros', 'vacinacao', 'inseminacao', 'nascimentos', 'producao', 'financeiro', 'comercial', 'perfil-propriedade'];
+    return ['inicio', 'agenda', 'rebanho', 'lotes', 'bezerros', 'vacinacao', 'inseminacao', 'nascimentos', 'producao', 'financeiro', 'comercial', 'relatorios', 'indicadores', 'ferramentas', 'perfil-propriedade', 'diagnostico'];
 }
 
 function item_menu(string $chave): ?array
@@ -152,4 +152,37 @@ function lancamentos(): array
         ['Pesagem', 'Peso de um animal', 'bezerros', 'scale'],
         ['Anotação', 'Observação da ordenha', 'anotacoes', 'notebook-pen'],
     ];
+}
+
+/** Variação percentual entre dois valores; null sem base de comparação. */
+function variacao(float $atual, float $anterior): ?float
+{
+    return $anterior != 0.0 ? ($atual - $anterior) / abs($anterior) * 100 : null;
+}
+
+function delta(?float $v, bool $inverter = false, string $rotulo = ''): string
+{
+    if ($v === null || !is_finite($v)) return '<span class="pequeno texto-suave">' . e($rotulo ? "sem dados $rotulo" : '—') . '</span>';
+    $bom = $inverter ? $v <= 0 : $v >= 0;
+    return '<span class="delta ' . ($bom ? 'delta-bom' : 'delta-ruim') . '">' . ($v >= 0 ? '▲' : '▼') . ' ' . e(num_br(abs($v), 1)) . '%'
+        . ($rotulo ? ' <span class="texto-suave">' . e($rotulo) . '</span>' : '') . '</span>';
+}
+
+/** Número de destaque (fora do Início, onde o destaque é o brinco). */
+function metrica(string $rotulo, string $valor, string $ic = '', string $dica = '', string $tom = ''): string
+{
+    return '<div class="painel metrica' . ($tom ? ' tom-' . e($tom) : '') . '"><span class="metrica-topo"><span class="pequeno texto-suave">' . e($rotulo) . '</span>'
+        . ($ic ? icone($ic, 'ic ic-suave') : '') . '</span><strong class="metrica-valor">' . e($valor) . '</strong>' . ($dica ? '<span class="metrica-dica">' . $dica . '</span>' : '') . '</div>';
+}
+
+/** Painel com título (como o Panel do original). */
+function painel_titulo(string $titulo, string $sub = '', string $acao = ''): string
+{
+    return '<div class="painel-cabeca"><div class="min0"><h2 class="titulo-secao">' . e($titulo) . '</h2>' . ($sub ? '<p class="pequeno texto-suave">' . e($sub) . '</p>' : '') . '</div>' . $acao . '</div>';
+}
+
+/** Recursos do plano Premium (importar e exportar). A etapa 4 liga a regra da assinatura. */
+function premium_ativo(): bool
+{
+    return function_exists('plano_premium_ativo') ? plano_premium_ativo(pid()) : true;
 }

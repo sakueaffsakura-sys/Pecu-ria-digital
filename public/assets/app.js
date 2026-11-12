@@ -37,6 +37,16 @@
   $$('dialog[data-auto]').forEach((d) => abrir(d));
   $$('[data-abrir-ao-carregar]').forEach((b) => abrir($(b.getAttribute('data-abrir'))));
 
+  // Importar planilha: "Trocar arquivo" volta para a escolha do arquivo.
+  document.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-trocar-arquivo]');
+    if (!b) return;
+    const d = b.closest('dialog');
+    d.querySelectorAll('.grade-stat, .caixa-problemas, .dialogo-rodape, p.pequeno').forEach((x) => { if (!x.closest('[data-form-arquivo]')) x.hidden = true; });
+    const f = d.querySelector('[data-form-arquivo]');
+    if (f) f.hidden = false;
+  });
+
   // ---------- Menus suspensos (detalhes) ----------
   document.addEventListener('toggle', (ev) => {
     const d = ev.target;

@@ -7,7 +7,7 @@ $abas = abas_da_secao($secao);
 $comAba = fn(array $extra = []) => url("app/$secao", array_filter(['aba' => $aba] + $extra));
 $acoes = '';
 if ($editar) {
-    $acoes .= '<span class="botao botao-contorno desligado" title="Importar planilha chega na próxima etapa">' . icone('upload') . '<span>Importar planilha</span></span>';
+    $acoes .= '<button type="button" class="botao botao-contorno" data-abrir="#dialogo-importar"' . (premium_ativo() ? '' : ' title="Disponível no plano Premium"') . '>' . icone('upload') . '<span>Importar planilha</span></button>';
     $acoes .= botao_link($comAba(['novo' => '1']), $m['novo'], 'plus');
 }
 ?>
@@ -93,4 +93,5 @@ if ($editar) {
 </section>
 
 <?php if ($form) require RAIZ . '/views/_formulario.php'; ?>
+<?php if ($editar) require RAIZ . '/views/_importar.php'; ?>
 <?php if ($ficha) require RAIZ . '/views/_ficha.php'; ?>
