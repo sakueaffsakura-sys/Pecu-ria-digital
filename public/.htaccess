@@ -1,0 +1,23 @@
+# Só para hospedagem com Apache (a VPS usa Nginx: veja deploy/nginx.conf).
+# O "DocumentRoot" do Apache deve apontar para esta pasta public/.
+Options -Indexes
+DirectoryIndex index.php
+
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Qualquer outro .php dá 404: só o index.php roda.
+    RewriteCond %{REQUEST_URI} !^/index\.php$
+    RewriteRule \.php$ - [R=404,L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|svg|woff2?|png|webp|jpg|ico)$">
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+</IfModule>

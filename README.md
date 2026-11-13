@@ -20,35 +20,57 @@ O sistema Pecuária Digital refeito em **PHP + MySQL**, para rodar em **VPS Linu
 
 As áreas das próximas etapas não aparecem no menu até ficarem prontas.
 
-## Instalar na VPS
+## Documentação
 
-Peça **Ubuntu 24.04** (ou 22.04, ou Debian 12) à hospedagem. Você recebe o **IP** e a **senha root**.
-
-1. (Opcional) No registro do domínio, crie um registro **A** apontando para o IP da VPS.
-2. Entre na VPS: no computador, `ssh root@IP-DA-VPS`; no celular Android, um app de SSH (Termius ou JuiceSSH).
-3. Rode:
-
-   ```bash
-   apt-get update && apt-get install -y git
-   git clone https://github.com/sakueaffsakura-sys/Pecu-ria-digital.git /opt/pecuaria-digital
-   cd /opt/pecuaria-digital
-   bash deploy/instalar.sh seudominio.com.br seu-email@exemplo.com     # ou: bash deploy/instalar.sh IP-DA-VPS
-   ```
-
-   Repositório privado: o `git clone` pede o usuário e um *token* do GitHub no lugar da senha
-   (github.com → Settings → Developer settings → Personal access tokens).
-4. Abra o endereço e clique em **Criar conta**. **A primeira conta criada vira a administradora do site.**
-5. Quer ver com dados de exemplo? `php /var/www/pecuaria/scripts/demonstracao.php seu-email "Fazenda Demonstração"`
-
-O instalador configura Nginx, PHP-FPM, MariaDB (usuário e senha aleatória só para o site), firewall,
-HTTPS grátis (com domínio), atualizações automáticas de segurança e backup diário do banco.
-
-| O quê | Como |
+| Documento | Conteúdo |
 | --- | --- |
-| Atualizar | `cd /opt/pecuaria-digital && git pull && bash deploy/instalar.sh seudominio.com.br seu-email` |
-| Backups | Todo dia às 03:17 em `/var/backups/pecuaria/` (14 dias). Copie para fora da VPS de vez em quando. |
-| Restaurar | `gunzip -c /var/backups/pecuaria/pecuaria-AAAA-MM-DD.sql.gz \| mysql -u root pecuaria` |
-| Erros | `tail -f /var/log/nginx/error.log` |
+| [docs/INSTALACAO.md](docs/INSTALACAO.md) | Passo a passo na VPS (SSH, domínio, instalador, primeiro acesso) e instalação manual |
+| [docs/CONFIGURACAO.md](docs/CONFIGURACAO.md) | Todas as opções do arquivo **`.env`**: banco, e-mail, Mercado Pago, IA |
+| [docs/BANCO-DE-DADOS.md](docs/BANCO-DE-DADOS.md) | Tabelas, criar o banco, consultas úteis, backup, restauração e migração do Supabase |
+| [docs/MANUTENCAO.md](docs/MANUTENCAO.md) | Atualizar, ver erros, problemas comuns, HTTPS, segurança |
+
+## Instalar na VPS (resumo)
+
+Peça **Ubuntu 24.04** (ou 22.04, ou Debian 12) à hospedagem e entre por SSH (`ssh root@IP-DA-VPS`;
+no Android, use o app Termius). Depois rode:
+
+```bash
+apt-get update && apt-get install -y git
+git clone https://github.com/sakueaffsakura-sys/Pecu-ria-digital.git /opt/pecuaria-digital
+cd /opt/pecuaria-digital
+bash deploy/instalar.sh seudominio.com.br seu-email@exemplo.com     # ou: bash deploy/instalar.sh IP-DA-VPS
+```
+
+O instalador configura Nginx, PHP-FPM, MariaDB (usuário só do site e senha aleatória), **cria o `.env`**,
+cria as tabelas, ativa o firewall, o HTTPS grátis (com domínio), as atualizações de segurança e o
+backup diário. No fim, ele confere tudo com `scripts/verificar.php`.
+
+Abra o endereço e clique em **Criar conta**. **A primeira conta criada vira a administradora do site.**
+
+## Configuração (`.env`)
+
+A configuração inteira fica no arquivo **`.env`** na raiz do projeto, fora da pasta pública e fora do GitHub.
+O modelo é o [`.env.example`](.env.example). Para instalar sem o script:
+
+```bash
+cp .env.example .env && nano .env      # preencha DB_SENHA e APP_URL
+php scripts/verificar.php              # confere PHP, extensões, .env, banco, tabelas, pastas e e-mail
+```
+
+## Estrutura
+
+```
+.env.example          modelo de configuração (copie para .env)
+app/                  código PHP: núcleo, acesso, regras, cadastros, gráficos, importação, rotas/
+views/                telas (HTML com PHP)
+public/               ÚNICA pasta aberta ao navegador: index.php, assets/ (CSS, JS, fontes, ícones)
+database/             schema.sql (tabelas) e criar-banco.sql (banco + usuário)
+deploy/               instalar.sh, nginx.conf, backup.sh
+scripts/              verificar.php, demonstracao.php, schema-sqlite.php
+docs/                 documentação
+storage/              criado na instalação: fotos, cache, planilhas (fora do Git)
+tests/                testes de ponta a ponta
+```
 
 ## Regras que vieram do original
 
@@ -67,12 +89,12 @@ HTTPS grátis (com domínio), atualizações automáticas de segurança e backup
 Senhas com bcrypt; sessão por aparelho (dá para encerrar); cookie `HttpOnly`/`SameSite` e `Secure` no HTTPS;
 token contra CSRF em todo formulário; consultas sempre com parâmetros; toda leitura e gravação filtra pela propriedade
 e confere se a pessoa é dona ou membro; "Só consulta" não grava; limite de tentativas no banco; cabeçalhos de segurança
-(CSP sem script de fora); só o `public/index.php` executa; `config/config.php` fora da pasta pública.
+(CSP sem script de fora); só o `public/index.php` executa; `.env` e código fora da pasta pública.
 
 ## Testar
 
 ```bash
-php tests/e2e.php    # sobe o site com um banco SQLite temporário e faz o caminho de um usuário (62 verificações)
+php tests/e2e.php    # sobe o site com um banco SQLite temporário e faz o caminho de um usuário (77 verificações)
 ```
 
 Ícones: [Lucide](https://lucide.dev) (ISC). Fontes: Atkinson Hyperlegible Next e Big Shoulders Display (SIL OFL), servidas pelo próprio site.

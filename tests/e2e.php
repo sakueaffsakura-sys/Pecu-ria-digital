@@ -130,7 +130,7 @@ ok($a->tem('Observar retorno de cio'), 'esta semana mostra retorno de cio (21 di
 preg_match('/name="chave" value="(vacinas_atrasadas:[^"]+)"/', $a->html, $m);
 $a->ir('/avisos/visto', ['_csrf' => $a->csrf(), 'chave' => $m[1] ?? '', 'volta' => '/app/inicio']);
 ok(!$a->tem('1 vacina atrasada') && $a->tem('1 parto nos próximos 15 dias'), 'marcar como visto esconde só aquele aviso');
-$a->ir('/app/agenda');
+$a->ir('/app/agenda?ref=' . $d(3));
 ok($a->tem('Observar retorno de cio') && $a->tem('Vacinas atrasadas'), 'agenda da semana');
 $a->ir('/app/agenda?modo=mes&ocultar[]=cio');
 ok(!$a->tem('Observar retorno de cio') && $a->tem('Parto previsto'), 'agenda do mês sem retorno de cio');

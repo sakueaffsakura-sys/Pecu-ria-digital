@@ -1,0 +1,3 @@
+# Proteção extra: se o servidor apontar por engano para a raiz do projeto
+# (em vez de public/), nada daqui pode ser aberto pelo navegador — nem o .env.
+Require all denied

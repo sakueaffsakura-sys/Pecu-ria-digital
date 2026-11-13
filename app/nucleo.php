@@ -11,14 +11,81 @@ function config(?string $chave = null): mixed
 {
     static $cfg = null;
     if ($cfg === null) {
-        $arquivo = getenv('PECUARIA_CONFIG') ?: RAIZ . '/config/config.php';
-        if (!is_file($arquivo)) {
-            http_response_code(500);
-            exit('Falta o arquivo config/config.php. Copie config/config.example.php e preencha.');
+        // Ordem: caminho indicado no servidor (PECUARIA_ENV / PECUARIA_CONFIG), depois .env na raiz,
+        // depois o formato antigo config/config.php.
+        $env = getenv('PECUARIA_ENV') ?: null;
+        $antigo = getenv('PECUARIA_CONFIG') ?: null;
+        if (!$env && !$antigo) {
+            if (is_file(RAIZ . '/.env')) $env = RAIZ . '/.env';
+            elseif (is_file(RAIZ . '/config/config.php')) $antigo = RAIZ . '/config/config.php';
         }
-        $cfg = require $arquivo;
+        if ($env && is_file($env)) {
+            $cfg = config_do_env(ler_env($env));
+        } elseif ($antigo && is_file($antigo)) {
+            $cfg = require $antigo;
+        } else {
+            http_response_code(500);
+            exit('Falta o arquivo .env na pasta do site. Copie .env.example para .env e preencha os dados do banco (veja docs/CONFIGURACAO.md).');
+        }
     }
     return $chave === null ? $cfg : ($cfg[$chave] ?? null);
+}
+
+/**
+ * Lê um arquivo .env simples: CHAVE=valor, linhas com # são comentário,
+ * valores podem vir entre aspas simples ou duplas. Variáveis de ambiente
+ * do servidor com o mesmo nome têm prioridade sobre o arquivo.
+ */
+function ler_env(string $arquivo): array
+{
+    $vars = [];
+    foreach (file($arquivo, FILE_IGNORE_NEW_LINES) ?: [] as $linha) {
+        $linha = trim($linha);
+        if ($linha === '' || $linha[0] === '#' || !str_contains($linha, '=')) continue;
+        [$k, $v] = array_map('trim', explode('=', $linha, 2));
+        if (str_starts_with($k, 'export ')) $k = trim(substr($k, 7));
+        if (!preg_match('/^[A-Z][A-Z0-9_]*$/', $k)) continue;
+        if (strlen($v) >= 2 && ($v[0] === '"' || $v[0] === "'") && $v[-1] === $v[0]) {
+            $aspas = $v[0];
+            $v = substr($v, 1, -1);
+            if ($aspas === '"') $v = strtr($v, ['\\n' => "\n", '\\"' => '"', '\\\\' => '\\']);
+        } elseif (($p = strpos($v, ' #')) !== false) {
+            $v = rtrim(substr($v, 0, $p)); // comentário no fim da linha
+        }
+        $vars[$k] = $v;
+    }
+    foreach ($vars as $k => $_) {
+        $doServidor = getenv($k);
+        if ($doServidor !== false && $doServidor !== '') $vars[$k] = $doServidor;
+    }
+    return $vars;
+}
+
+/** Converte as variáveis do .env no formato usado pelo resto do site. */
+function config_do_env(array $e): array
+{
+    $sim = fn(string $k, bool $padrao = false) => isset($e[$k]) && $e[$k] !== '' ? in_array(strtolower($e[$k]), ['1', 'true', 'sim', 'yes', 'on'], true) : $padrao;
+    $tipo = strtolower($e['DB_CONEXAO'] ?? 'mysql');
+    if ($tipo === 'sqlite') {
+        $dsn = 'sqlite:' . ($e['DB_BANCO'] ?? RAIZ . '/storage/banco.sqlite');
+    } else {
+        $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $e['DB_HOST'] ?? '127.0.0.1', (int) ($e['DB_PORTA'] ?? 3306), $e['DB_BANCO'] ?? 'pecuaria');
+        if (!empty($e['DB_SOCKET'])) $dsn = sprintf('mysql:unix_socket=%s;dbname=%s;charset=utf8mb4', $e['DB_SOCKET'], $e['DB_BANCO'] ?? 'pecuaria');
+    }
+    return [
+        'nome_site' => $e['APP_NOME'] ?? 'Pecuária Digital',
+        'url' => rtrim($e['APP_URL'] ?? 'http://localhost:8000', '/'),
+        'debug' => $sim('APP_DEBUG'),
+        'fuso' => $e['APP_FUSO'] ?? 'America/Sao_Paulo',
+        'db' => ['dsn' => $dsn, 'usuario' => $e['DB_USUARIO'] ?? null, 'senha' => $e['DB_SENHA'] ?? null],
+        'email' => [
+            'host' => $e['MAIL_HOST'] ?? '', 'porta' => (int) ($e['MAIL_PORTA'] ?? 587), 'seguranca' => strtolower($e['MAIL_SEGURANCA'] ?? 'tls'),
+            'usuario' => $e['MAIL_USUARIO'] ?? '', 'senha' => $e['MAIL_SENHA'] ?? '',
+            'remetente' => $e['MAIL_REMETENTE'] ?? '', 'nome_remetente' => $e['MAIL_NOME_REMETENTE'] ?? ($e['APP_NOME'] ?? 'Pecuária Digital'),
+        ],
+        'mercado_pago' => ['token' => $e['MERCADOPAGO_ACCESS_TOKEN'] ?? '', 'chave_publica' => $e['MERCADOPAGO_PUBLIC_KEY'] ?? '', 'segredo_webhook' => $e['MERCADOPAGO_WEBHOOK_SECRET'] ?? ''],
+        'ia' => ['chave' => $e['IA_CHAVE_API'] ?? '', 'modelo' => $e['IA_MODELO'] ?? '', 'url' => $e['IA_URL'] ?? ''],
+    ];
 }
 
 // ----- Banco ---------------------------------------------------------------

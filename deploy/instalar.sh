@@ -7,7 +7,7 @@
 #     bash deploy/instalar.sh 203.0.113.10
 #
 # Instala Nginx, PHP-FPM, MariaDB, firewall e (com domínio + e-mail) o certificado HTTPS grátis.
-# Pode rodar de novo para atualizar o código: o banco e o config/config.php são preservados.
+# Pode rodar de novo para atualizar o código: o banco e o arquivo .env são preservados.
 set -euo pipefail
 
 DOMINIO="${1:-}"
@@ -31,7 +31,7 @@ eh_ip=0
 passo "Instalando pacotes (Nginx, PHP, MariaDB, firewall)"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y nginx mariadb-server php-fpm php-cli php-mysql php-mbstring php-curl \
+apt-get install -y nginx mariadb-server php-fpm php-cli php-mysql php-mbstring php-curl php-gd php-zip php-xml \
   ufw rsync openssl cron unattended-upgrades
 if [ "$eh_ip" -eq 0 ] && [ -n "$EMAIL" ]; then apt-get install -y certbot python3-certbot-nginx; fi
 
@@ -56,11 +56,11 @@ INI
 
 passo "Copiando o site para $PASTA"
 mkdir -p "$PASTA"
-rsync -a --delete --exclude '.git' --exclude 'tests' --exclude 'config/config.php' --exclude 'storage' "$ORIGEM/" "$PASTA/"
+rsync -a --delete --exclude '.git' --exclude 'tests' --exclude 'config/config.php' --exclude '.env' --exclude 'storage' "$ORIGEM/" "$PASTA/"
 mkdir -p "$PASTA/storage"
 
-passo "Banco de dados"
-if [ ! -f "$PASTA/config/config.php" ]; then
+passo "Banco de dados e arquivo .env"
+if [ ! -f "$PASTA/.env" ] && [ ! -f "$PASTA/config/config.php" ]; then
   SENHA_BANCO="$(openssl rand -hex 24)"
   mysql -u root <<SQL
 CREATE DATABASE IF NOT EXISTS \`$BANCO\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -70,23 +70,17 @@ GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES, LOCK TAB
 FLUSH PRIVILEGES;
 SQL
   if [ "$eh_ip" -eq 0 ] && [ -n "$EMAIL" ]; then URL="https://$DOMINIO"; else URL="http://$DOMINIO"; fi
-  cat > "$PASTA/config/config.php" <<PHP
-<?php
-return [
-    'nome_site' => 'Pecuária Digital',
-    'url' => '$URL',
-    'db' => [
-        'dsn' => 'mysql:host=localhost;dbname=$BANCO;charset=utf8mb4',
-        'usuario' => '$USUARIO_BANCO',
-        'senha' => '$SENHA_BANCO',
-    ],
-    'debug' => false,
-    'fuso' => 'America/Sao_Paulo',
-];
-PHP
-  echo "config/config.php criado com uma senha de banco aleatória."
+  # Parte do .env.example e troca só o que a instalação sabe.
+  sed -e "s#^APP_URL=.*#APP_URL=$URL#" \
+      -e "s#^DB_HOST=.*#DB_HOST=localhost#" \
+      -e "s#^DB_BANCO=.*#DB_BANCO=$BANCO#" \
+      -e "s#^DB_USUARIO=.*#DB_USUARIO=$USUARIO_BANCO#" \
+      -e "s#^DB_SENHA=.*#DB_SENHA=$SENHA_BANCO#" \
+      -e "s#^MAIL_REMETENTE=.*#MAIL_REMETENTE=nao-responda@$DOMINIO#" \
+      "$PASTA/.env.example" > "$PASTA/.env"
+  echo ".env criado com uma senha de banco aleatória (veja docs/CONFIGURACAO.md para o e-mail)."
 else
-  echo "config/config.php já existe: mantido."
+  echo "Configuração já existe (.env ou config/config.php): mantida."
 fi
 # Tabelas novas são criadas; as que já existem não são tocadas.
 mysql -u root "$BANCO" < "$PASTA/database/schema.sql"
@@ -96,6 +90,7 @@ find "$PASTA" -type d -exec chmod 750 {} \;
 find "$PASTA" -type f -exec chmod 640 {} \;
 chmod 755 "$PASTA/deploy/"*.sh
 chmod 770 "$PASTA/storage"
+[ -f "$PASTA/.env" ] && chmod 640 "$PASTA/.env"
 
 passo "Configurando o Nginx"
 cat > /etc/nginx/conf.d/pecuaria-limite.conf <<'NGX'
@@ -117,7 +112,8 @@ ufw --force enable
 if [ "$eh_ip" -eq 0 ] && [ -n "$EMAIL" ]; then
   passo "Certificado HTTPS (Let's Encrypt)"
   if certbot --nginx -d "$DOMINIO" --non-interactive --agree-tos -m "$EMAIL" --redirect --keep-until-expiring; then
-    sed -i "s#'url' => 'http://#'url' => 'https://#" "$PASTA/config/config.php"
+    [ -f "$PASTA/.env" ] && sed -i "s#^APP_URL=http://#APP_URL=https://#" "$PASTA/.env"
+    [ -f "$PASTA/config/config.php" ] && sed -i "s#'url' => 'http://#'url' => 'https://#" "$PASTA/config/config.php"
   else
     echo "Não deu para emitir o certificado agora. Confira se o domínio já aponta para o IP desta VPS e rode de novo:"
     echo "  certbot --nginx -d $DOMINIO -m $EMAIL --agree-tos --redirect"
@@ -133,6 +129,9 @@ passo "Atualizações de segurança automáticas do sistema"
 dpkg-reconfigure -f noninteractive unattended-upgrades || true
 
 if [ "$eh_ip" -eq 0 ] && [ -n "$EMAIL" ]; then ENDERECO="https://$DOMINIO"; else ENDERECO="http://$DOMINIO"; fi
+passo "Conferindo a instalação"
+php "$PASTA/scripts/verificar.php" || true
+
 passo "Pronto!"
 cat <<FIM
 Abra $ENDERECO e clique em "Criar conta".

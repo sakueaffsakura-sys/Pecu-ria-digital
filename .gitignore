@@ -1,4 +1,6 @@
 config/config.php
+.env
+.env.local
 storage/
 *.log
 .DS_Store
